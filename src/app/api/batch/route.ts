@@ -3,11 +3,24 @@ import OpenAI from 'openai'
 import { writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let openai: OpenAI | null = null;
+
+// Initialize OpenAI client only if API key is available
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function POST(request: Request) {
+  // Check if OpenAI client is initialized
+  if (!openai) {
+    return NextResponse.json(
+      { error: 'OpenAI API key not configured' },
+      { status: 503 }
+    );
+  }
+
   const files: File[] = []
   let tempFiles: string[] = []
 
