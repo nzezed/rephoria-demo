@@ -85,25 +85,29 @@ export default function SignInPage() {
               </Text>
             )}
 
-            <Flex justifyContent="between" className="space-x-4">
-              <Button
-                variant="secondary"
-                onClick={() => router.push('/auth/signup')}
-                type="button"
-                className="w-full bg-gray-700 text-white hover:bg-gray-600"
-              >
-                Create Account
-              </Button>
-              <Button
-                type="submit"
-                loading={isLoading}
-                className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
-              >
-                Sign In
-              </Button>
-            </Flex>
+            <Button
+              type="submit"
+              loading={isLoading}
+              className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Sign In
+            </Button>
 
-            <div className="text-center">
+            <div className="space-y-4 text-center">
+              <div>
+                <Text className="text-gray-400">
+                  Don't have an account?{' '}
+                  <Button
+                    variant="light"
+                    onClick={() => router.push('/auth/signup')}
+                    type="button"
+                    className="text-indigo-400 hover:text-indigo-300 p-0"
+                  >
+                    Create one
+                  </Button>
+                </Text>
+              </div>
+
               <Button
                 variant="light"
                 onClick={() => router.push('/auth/forgot-password')}
