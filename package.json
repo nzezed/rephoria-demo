@@ -1,0 +1,41 @@
+{
+  "name": "rephoria-demo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.9.0",
+    "@heroicons/react": "^2.1.1",
+    "@prisma/client": "^6.6.0",
+    "@tremor/react": "^3.14.0",
+    "bcryptjs": "^3.0.2",
+    "date-fns": "^3.3.1",
+    "framer-motion": "^11.0.5",
+    "next": "14.1.0",
+    "next-auth": "^4.24.11",
+    "openai": "^4.95.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.3.8",
+    "react-use-websocket": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.35",
+    "prisma": "^6.6.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
+  }
+}
