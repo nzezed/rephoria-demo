@@ -46,34 +46,36 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="max-w-md w-full">
+    <main className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+      <Card className="max-w-md w-full bg-gray-800 text-white">
         <div className="space-y-6">
           <div className="space-y-2 text-center">
-            <Title>Welcome to Rephoria</Title>
-            <Text>Sign in to your account</Text>
+            <Title className="text-white">Welcome to Rephoria</Title>
+            <Text className="text-gray-300">Sign in to your account</Text>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Text>Email</Text>
+              <Text className="text-gray-300">Email</Text>
               <TextInput
                 type="email"
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
               />
             </div>
 
             <div>
-              <Text>Password</Text>
+              <Text className="text-gray-300">Password</Text>
               <TextInput
                 type="password"
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
+                className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
               />
             </div>
 
@@ -88,14 +90,14 @@ export default function SignInPage() {
                 variant="secondary"
                 onClick={() => router.push('/auth/signup')}
                 type="button"
-                className="w-full"
+                className="w-full bg-gray-700 text-white hover:bg-gray-600"
               >
                 Create Account
               </Button>
               <Button
                 type="submit"
                 loading={isLoading}
-                className="w-full"
+                className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
               >
                 Sign In
               </Button>
@@ -106,6 +108,7 @@ export default function SignInPage() {
                 variant="light"
                 onClick={() => router.push('/auth/forgot-password')}
                 type="button"
+                className="text-gray-400 hover:text-gray-300"
               >
                 Forgot password?
               </Button>
