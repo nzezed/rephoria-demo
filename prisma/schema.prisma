@@ -21,6 +21,7 @@ model Organization {
   users     User[]
   agents    Agent[]
   calls     Call[]
+  integrations Integration[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -135,4 +136,20 @@ model Insight {
   updatedAt  DateTime @updatedAt
 
   @@index([callId])
+}
+
+// Integration settings for external platforms (telephony, CRM, etc.)
+model Integration {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  provider       String       // e.g. "twilio", "steam-connect"
+  type           String       // e.g. "call_platform" | "crm"
+  status         String       @default("disconnected")
+  config         Json?        // provider-specific credentials/config
+  lastSync       DateTime?    // timestamp of last successful sync
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
 }

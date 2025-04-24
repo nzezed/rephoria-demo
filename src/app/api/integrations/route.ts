@@ -1,71 +1,102 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
-// In a real application, these would be stored in a database
-let integrationConfigs: Record<string, any> = {}
+// GET /api/integrations
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-export async function POST(request: Request) {
   try {
-    const { integrationId, config } = await request.json()
-
-    // Validate required fields
-    if (!integrationId || !config.apiKey || !config.accountId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
-    // In a real application, this would:
-    // 1. Validate the credentials with the actual service
-    // 2. Store the encrypted credentials in a database
-    // 3. Set up necessary webhooks or listeners
-    // 4. Initialize any required client libraries
-
-    // For demo purposes, we'll just store the config
-    integrationConfigs[integrationId] = {
-      ...config,
-      status: 'connected',
-      lastSync: new Date().toISOString()
-    }
-
-    return NextResponse.json({
-      status: 'connected',
-      lastSync: integrationConfigs[integrationId].lastSync
+    // Cast prisma to any to access integration delegate
+    const integrations = await (prisma as any).integration.findMany({
+      where: { organizationId: session.user.organizationId },
+      orderBy: { createdAt: 'asc' }
     })
+    return NextResponse.json(integrations)
   } catch (error) {
-    console.error('Error connecting integration:', error)
-    return NextResponse.json(
-      { error: 'Failed to connect integration' },
-      { status: 500 }
-    )
+    console.error('Error fetching integrations:', error)
+    return NextResponse.json({ error: 'Failed to fetch integrations' }, { status: 500 })
   }
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const { integrationId } = await request.json()
+// POST /api/integrations  (create or update)
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-    if (!integrationId) {
-      return NextResponse.json(
-        { error: 'Missing integration ID' },
-        { status: 400 }
-      )
+  const body = await request.json()
+  const { provider, type, config, status } = body
+  if (!provider || !type) {
+    return NextResponse.json({ error: 'Provider and type are required' }, { status: 400 })
+  }
+
+  try {
+    // Cast prisma to any for integration delegate
+    const existing = await (prisma as any).integration.findFirst({
+      where: { organizationId: session.user.organizationId, provider }
+    })
+
+    let integration
+    if (existing) {
+      integration = await (prisma as any).integration.update({
+        where: { id: existing.id },
+        data: {
+          config,
+          status: status || 'connected',
+          lastSync: new Date()
+        }
+      })
+    } else {
+      integration = await (prisma as any).integration.create({
+        data: {
+          organizationId: session.user.organizationId,
+          provider,
+          type,
+          config,
+          status: status || 'connected',
+          lastSync: new Date()
+        }
+      })
     }
 
-    // In a real application, this would:
-    // 1. Remove webhooks and listeners
-    // 2. Clean up any resources
-    // 3. Update the database
+    return NextResponse.json(integration)
+  } catch (error) {
+    console.error('Error saving integration:', error)
+    return NextResponse.json({ error: 'Failed to save integration' }, { status: 500 })
+  }
+}
 
-    delete integrationConfigs[integrationId]
+// DELETE /api/integrations (disconnect)
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
+  const { integrationId } = await request.json()
+  if (!integrationId) {
+    return NextResponse.json({ error: 'Missing integration ID' }, { status: 400 })
+  }
+
+  try {
+    // Cast prisma to any for integration delegate
+    const existing = await (prisma as any).integration.findFirst({
+      where: { organizationId: session.user.organizationId, id: integrationId }
+    })
+    if (!existing) {
+      return NextResponse.json({ error: 'Integration not found' }, { status: 404 })
+    }
+    await (prisma as any).integration.delete({ where: { id: integrationId } })
     return NextResponse.json({ status: 'disconnected' })
   } catch (error) {
     console.error('Error disconnecting integration:', error)
-    return NextResponse.json(
-      { error: 'Failed to disconnect integration' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to disconnect integration' }, { status: 500 })
   }
 }
 

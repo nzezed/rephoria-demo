@@ -13,7 +13,10 @@ export async function GET(request: Request) {
     // Cast prisma to any to access the `call` delegate
     const calls = await (prisma as any).call.findMany({
       where: { organizationId: session.user.organizationId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        agent: { select: { id: true, name: true } }
+      }
     })
     return NextResponse.json(calls)
   } catch (err) {

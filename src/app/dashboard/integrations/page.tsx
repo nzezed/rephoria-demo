@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Card,
   Title,
@@ -26,6 +26,7 @@ interface Integration {
   type: 'call_platform' | 'crm'
   status: 'connected' | 'disconnected' | 'pending'
   lastSync?: string
+  config?: IntegrationConfig
 }
 
 interface IntegrationConfig {
@@ -41,72 +42,50 @@ interface IntegrationConfig {
 export default function IntegrationsPage() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
   const [config, setConfig] = useState<IntegrationConfig>({})
-  const [integrations, setIntegrations] = useState<Integration[]>([
-    {
-      id: 'steam-connect',
-      name: 'Steam Connect',
-      type: 'call_platform',
-      status: 'disconnected',
-    },
-    {
-      id: 'twilio',
-      name: 'Twilio',
-      type: 'call_platform',
-      status: 'disconnected',
-    },
-    {
-      id: 'five9',
-      name: 'Five9',
-      type: 'call_platform',
-      status: 'disconnected',
-    },
-    {
-      id: 'genesys',
-      name: 'Genesys',
-      type: 'call_platform',
-      status: 'disconnected',
-    },
-    {
-      id: 'salesforce',
-      name: 'Salesforce',
-      type: 'crm',
-      status: 'disconnected',
-    },
-    {
-      id: 'hubspot',
-      name: 'HubSpot',
-      type: 'crm',
-      status: 'disconnected',
-    },
-    {
-      id: 'zendesk',
-      name: 'Zendesk',
-      type: 'crm',
-      status: 'disconnected',
-    },
-  ])
+  const [integrations, setIntegrations] = useState<Integration[]>([])
+
+  // Load integrations from API on mount
+  useEffect(() => {
+    async function loadIntegrations() {
+      try {
+        const res = await fetch('/api/integrations')
+        if (res.ok) {
+          const data: Integration[] = await res.json()
+          setIntegrations(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch integrations', err)
+      }
+    }
+    loadIntegrations()
+  }, [])
 
   const handleConnect = async (integrationId: string) => {
     setActiveIntegration(integrationId)
-    // Reset config when selecting a new integration
-    setConfig({})
+    // Reset config to existing settings if available
+    const existing = integrations.find(i => i.id === integrationId)
+    setConfig(existing?.config ?? {})
   }
 
   const handleSaveConfig = async () => {
     if (!activeIntegration) return
 
-    // In a real application, this would make an API call to validate and store credentials
-    setIntegrations(integrations.map(integration => 
-      integration.id === activeIntegration
-        ? { 
-            ...integration, 
-            status: 'connected',
-            lastSync: new Date().toISOString()
-          }
-        : integration
-    ))
-    setActiveIntegration(null)
-    setConfig({})
+    try {
+      const payload = { provider: activeIntegration, type: integrations.find(i => i.id === activeIntegration)?.type, config, status: 'connected' }
+      const res = await fetch('/api/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (res.ok) {
+        // Refresh list and close config pane
+        const updated = await res.json()
+        setIntegrations(prev => prev.map(i => i.id === updated.id ? updated : i))
+        setActiveIntegration(null)
+      }
+    } catch (err) {
+      console.error('Failed to save integration', err)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -171,7 +150,18 @@ export default function IntegrationsPage() {
                   <Button
                     size="sm"
                     color={integration.status === 'connected' ? 'red' : 'blue'}
-                    onClick={() => handleConnect(integration.id)}
+                    onClick={integration.status === 'connected'
+                      ? async () => {
+                          // Disconnect
+                          const res = await fetch('/api/integrations', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ integrationId: integration.id })
+                          })
+                          if (res.ok) setIntegrations(prev => prev.filter(i => i.id !== integration.id))
+                        }
+                      : () => handleConnect(integration.id)
+                    }
                   >
                     {integration.status === 'connected' ? 'Disconnect' : 'Connect'}
                   </Button>
@@ -214,7 +204,17 @@ export default function IntegrationsPage() {
                   <Button
                     size="sm"
                     color={integration.status === 'connected' ? 'red' : 'blue'}
-                    onClick={() => handleConnect(integration.id)}
+                    onClick={integration.status === 'connected'
+                      ? async () => {
+                          const res = await fetch('/api/integrations', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ integrationId: integration.id })
+                          })
+                          if (res.ok) setIntegrations(prev => prev.filter(i => i.id !== integration.id))
+                        }
+                      : () => handleConnect(integration.id)
+                    }
                   >
                     {integration.status === 'connected' ? 'Disconnect' : 'Connect'}
                   </Button>

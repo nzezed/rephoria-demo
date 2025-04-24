@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Card,
   Title,
@@ -16,60 +16,68 @@ import {
   TabPanels,
   TabPanel,
 } from '@tremor/react'
-import { PhoneIcon, ClockIcon, HeartIcon } from '@heroicons/react/24/outline'
+import { PhoneIcon, ClockIcon } from '@heroicons/react/24/outline'
 
-// Mock active calls data
-const mockCalls = [
-  {
-    id: 1,
-    agent: 'Sarah Miller',
-    customer: '+1 (555) 123-4567',
-    duration: '05:23',
-    sentiment: 'positive',
-    transcript: [
-      { time: '00:00', speaker: 'Agent', text: 'Thank you for calling Acme Support. This is Sarah. How may I help you today?' },
-      { time: '00:05', speaker: 'Customer', text: 'Hi Sarah, I\'m having trouble accessing my account.' },
-      { time: '00:10', speaker: 'Agent', text: 'I\'m sorry to hear that. I\'ll be happy to help you regain access. Can you please verify your email address?' },
-    ],
-  },
-  {
-    id: 2,
-    agent: 'John Davis',
-    customer: '+1 (555) 987-6543',
-    duration: '02:45',
-    sentiment: 'neutral',
-    transcript: [
-      { time: '00:00', speaker: 'Agent', text: 'Thank you for calling Acme Support. This is John. How can I assist you?' },
-      { time: '00:06', speaker: 'Customer', text: 'Hello, I\'d like to upgrade my subscription plan.' },
-      { time: '00:12', speaker: 'Agent', text: 'I\'ll be glad to help you with that. First, let me pull up your account information.' },
-    ],
-  },
-]
+// Define the Call type returned by the API
+interface Call {
+  id: string
+  agent: { id: string; name: string } | null
+  startTime: string
+  endTime?: string
+  status: string
+  createdAt: string
+}
+
+// Define the shape of a transcript entry
+interface TranscriptEntry { time: string; speaker: string; text: string }
 
 export default function LiveCalls() {
-  const [activeCalls, setActiveCalls] = useState(mockCalls)
-  const [selectedCall, setSelectedCall] = useState(mockCalls[0])
+  const [activeCalls, setActiveCalls] = useState<Call[]>([])
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null)
+  const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([])
 
-  // Simulate updating call durations
+  // Fetch calls once on mount
   useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveCalls(calls =>
-        calls.map(call => ({
-          ...call,
-          duration: incrementTime(call.duration),
-        }))
-      )
-    }, 1000)
-
-    return () => clearInterval(timer)
+    async function loadCalls() {
+      try {
+        const res = await fetch('/api/calls')
+        if (res.ok) {
+          const data: Call[] = await res.json()
+          setActiveCalls(data)
+          if (data.length > 0) setSelectedCall(data[0])
+        }
+      } catch (err) {
+        console.error('Failed to fetch calls', err)
+      }
+    }
+    loadCalls()
   }, [])
 
-  const incrementTime = (timeStr: string) => {
-    const [mins, secs] = timeStr.split(':').map(Number)
-    const totalSeconds = mins * 60 + secs + 1
-    const newMins = Math.floor(totalSeconds / 60)
-    const newSecs = totalSeconds % 60
-    return `${String(newMins).padStart(2, '0')}:${String(newSecs).padStart(2, '0')}`
+  // Fetch transcript whenever selectedCall changes
+  useEffect(() => {
+    async function loadTranscript() {
+      if (!selectedCall) return setTranscriptEntries([])
+      try {
+        const res = await fetch(`/api/calls/${selectedCall.id}/transcript`)
+        if (res.ok) {
+          const data = await res.json()
+          setTranscriptEntries(Array.isArray(data.text) ? data.text : [])
+        }
+      } catch (err) {
+        console.error('Failed to load transcript', err)
+      }
+    }
+    loadTranscript()
+  }, [selectedCall])
+
+  // Calculate call duration as MM:SS
+  function calculateDuration(start: string, end?: string) {
+    const startMs = new Date(start).getTime()
+    const endMs = end ? new Date(end).getTime() : Date.now()
+    const totalSec = Math.floor((endMs - startMs) / 1000)
+    const mins = Math.floor(totalSec / 60)
+    const secs = totalSec % 60
+    return `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
   }
 
   const getSentimentColor = (sentiment: string) => {
@@ -101,7 +109,7 @@ export default function LiveCalls() {
               <div
                 key={call.id}
                 className={`p-4 rounded-lg cursor-pointer transition-colors ${
-                  selectedCall.id === call.id
+                  selectedCall?.id === call.id
                     ? 'bg-rephoria-50 dark:bg-gray-800'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
@@ -109,19 +117,18 @@ export default function LiveCalls() {
               >
                 <Flex>
                   <div className="space-y-2">
-                    <Text className="font-medium">{call.agent}</Text>
+                    <Text className="font-medium">{call.agent?.name || 'Unknown Agent'}</Text>
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <PhoneIcon className="h-4 w-4" />
-                      <span>{call.customer}</span>
+                      <ClockIcon className="h-4 w-4" />
+                      <span>{new Date(call.startTime).toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Badge color={getSentimentColor(call.sentiment)}>
-                      {call.sentiment}
+                    <Badge color={getSentimentColor(call.status)}>
+                      {call.status}
                     </Badge>
                     <div className="flex items-center space-x-1 text-sm text-gray-500">
-                      <ClockIcon className="h-4 w-4" />
-                      <span>{call.duration}</span>
+                      <span>{calculateDuration(call.startTime, call.endTime)}</span>
                     </div>
                   </div>
                 </Flex>
@@ -140,28 +147,32 @@ export default function LiveCalls() {
             <TabPanels>
               <TabPanel>
                 <div className="mt-4 space-y-4">
-                  {selectedCall.transcript.map((entry, index) => (
-                    <div
-                      key={index}
-                      className={`flex space-x-4 ${
-                        entry.speaker === 'Agent' ? 'justify-end' : ''
-                      }`}
-                    >
+                  {transcriptEntries.length > 0 ? (
+                    transcriptEntries.map((entry, index) => (
                       <div
-                        className={`max-w-[80%] p-3 rounded-lg ${
-                          entry.speaker === 'Agent'
-                            ? 'bg-rephoria-50 text-rephoria-900'
-                            : 'bg-gray-100 text-gray-900'
+                        key={index}
+                        className={`flex space-x-4 ${
+                          entry.speaker === 'Agent' ? 'justify-end' : ''
                         }`}
                       >
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>{entry.speaker}</span>
-                          <span>{entry.time}</span>
+                        <div
+                          className={`max-w-[80%] p-3 rounded-lg ${
+                            entry.speaker === 'Agent'
+                              ? 'bg-rephoria-50 text-rephoria-900'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}
+                        >
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>{entry.speaker}</span>
+                            <span>{entry.time}</span>
+                          </div>
+                          <Text>{entry.text}</Text>
                         </div>
-                        <Text>{entry.text}</Text>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <Text>No transcript available</Text>
+                  )}
                 </div>
               </TabPanel>
               <TabPanel>
