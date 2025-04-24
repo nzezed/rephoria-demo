@@ -8,7 +8,7 @@ import { join } from 'path'
 
 // Disable static prerendering for this dynamic API route
 export const dynamic = 'force-dynamic'
-export const fetchCache = 'no-store'
+export const fetchCache = 'force-no-store'
 
 // Cast prisma to any to access model delegates
 const client = prisma as any
