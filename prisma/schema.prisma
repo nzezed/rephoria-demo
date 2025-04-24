@@ -19,6 +19,7 @@ model Organization {
   subdomain String   @unique
   plan      String   @default("free")
   users     User[]
+  agents    Agent[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -78,4 +79,15 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Agent {
+  id             String       @id @default(cuid())
+  name           String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
 }
