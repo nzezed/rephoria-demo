@@ -98,43 +98,4 @@ export async function DELETE(request: Request) {
     console.error('Error disconnecting integration:', error)
     return NextResponse.json({ error: 'Failed to disconnect integration' }, { status: 500 })
   }
-}
-
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const integrationId = searchParams.get('id')
-
-    if (integrationId) {
-      // Return specific integration status
-      const config = integrationConfigs[integrationId]
-      if (!config) {
-        return NextResponse.json(
-          { error: 'Integration not found' },
-          { status: 404 }
-        )
-      }
-      return NextResponse.json({
-        status: config.status,
-        lastSync: config.lastSync
-      })
-    }
-
-    // Return all integration statuses
-    return NextResponse.json(
-      Object.entries(integrationConfigs).reduce((acc, [id, config]) => ({
-        ...acc,
-        [id]: {
-          status: config.status,
-          lastSync: config.lastSync
-        }
-      }), {})
-    )
-  } catch (error) {
-    console.error('Error fetching integration status:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch integration status' },
-      { status: 500 }
-    )
-  }
 } 
