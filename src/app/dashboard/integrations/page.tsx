@@ -21,7 +21,8 @@ import {
 } from '@heroicons/react/24/outline'
 
 interface Integration {
-  id: string
+  id: string             // DB id or provider key for new entries
+  provider: string       // provider identifier e.g. 'twilio'
   name: string
   type: 'call_platform' | 'crm'
   status: 'connected' | 'disconnected' | 'pending'
@@ -39,10 +40,37 @@ interface IntegrationConfig {
   clientSecret?: string
 }
 
+// Define the available providers so cards always render even if no DB rows
+const SUPPORTED_INTEGRATIONS: { provider: string; name: string; type: 'call_platform' | 'crm' }[] = [
+  { provider: 'steam-connect', name: 'Steam Connect', type: 'call_platform' },
+  { provider: 'twilio',       name: 'Twilio',        type: 'call_platform' },
+  { provider: 'five9',        name: 'Five9',         type: 'call_platform' },
+  { provider: 'genesys',      name: 'Genesys',       type: 'call_platform' },
+  { provider: 'salesforce',   name: 'Salesforce',    type: 'crm'           },
+  { provider: 'hubspot',      name: 'HubSpot',       type: 'crm'           },
+  { provider: 'zendesk',      name: 'Zendesk',       type: 'crm'           },
+]
+
 export default function IntegrationsPage() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
   const [config, setConfig] = useState<IntegrationConfig>({})
   const [integrations, setIntegrations] = useState<Integration[]>([])
+
+  // Merge supported providers with DB entries so cards always show
+  const displayIntegrations = SUPPORTED_INTEGRATIONS.map(p => {
+    const existing = integrations.find(i => i.provider === p.provider)
+    return existing
+      ? existing
+      : {
+          id: p.provider,
+          provider: p.provider,
+          name: p.name,
+          type: p.type,
+          status: 'disconnected',
+          config: {},
+          lastSync: undefined,
+        }
+  })
 
   // Load integrations from API on mount
   useEffect(() => {
@@ -123,7 +151,7 @@ export default function IntegrationsPage() {
         <Text>Connect your call platform to enable real-time call analysis and insights.</Text>
         
         <Grid numItemsMd={3} className="gap-6 mt-6">
-          {integrations
+          {displayIntegrations
             .filter(integration => integration.type === 'call_platform')
             .map(integration => (
               <Card key={integration.id} decoration="left" decorationColor={getStatusColor(integration.status)}>
@@ -177,7 +205,7 @@ export default function IntegrationsPage() {
         <Text>Connect your CRM to sync customer data and enhance call insights.</Text>
         
         <Grid numItemsMd={3} className="gap-6 mt-6">
-          {integrations
+          {displayIntegrations
             .filter(integration => integration.type === 'crm')
             .map(integration => (
               <Card key={integration.id} decoration="left" decorationColor={getStatusColor(integration.status)}>
