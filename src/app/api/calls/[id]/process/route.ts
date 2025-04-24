@@ -8,12 +8,18 @@ import { join } from 'path'
 
 // Cast prisma to any to access model delegates
 const client = prisma as any
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  // Initialize OpenAI inside handler to avoid build-time env issues
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 500 })
+  }
+  const openai = new OpenAI({ apiKey })
+
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -63,8 +69,12 @@ export async function POST(
       ],
       response_format: { type: 'json_object' }
     })
-    // Parse analysis content after casting to string
-    const analysis = JSON.parse(analysisRes.choices[0].message.content as string)
+    // Extract and narrow content for JSON.parse
+    const contentNullable = analysisRes.choices[0].message.content
+    if (contentNullable === null) {
+      throw new Error('No content received from OpenAI')
+    }
+    const analysis = JSON.parse(contentNullable)
 
     // Store insights
     if (Array.isArray(analysis.insights)) {
