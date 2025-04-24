@@ -3,99 +3,76 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Always fetch fresh data
+export const dynamic = 'force-dynamic'
+
 // GET /api/integrations
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
   try {
-    // Cast prisma to any to access integration delegate
-    const integrations = await (prisma as any).integration.findMany({
+    const integrations = await prisma.integration.findMany({
       where: { organizationId: session.user.organizationId },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(integrations)
-  } catch (error) {
-    console.error('Error fetching integrations:', error)
+  } catch (err) {
+    console.error('Error fetching integrations:', err)
     return NextResponse.json({ error: 'Failed to fetch integrations' }, { status: 500 })
   }
 }
 
-// POST /api/integrations  (create or update)
+// POST /api/integrations
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
-  const body = await request.json()
-  const { provider, type, config, status } = body
+  const { provider, type, config, status } = await request.json()
   if (!provider || !type) {
     return NextResponse.json({ error: 'Provider and type are required' }, { status: 400 })
   }
-
   try {
-    // Cast prisma to any for integration delegate
-    const existing = await (prisma as any).integration.findFirst({
-      where: { organizationId: session.user.organizationId, provider }
+    const integration = await prisma.integration.create({
+      data: {
+        organizationId: session.user.organizationId,
+        provider,
+        type,
+        config,
+        status: status || 'connected',
+        lastSync: new Date(),
+      },
     })
-
-    let integration
-    if (existing) {
-      integration = await (prisma as any).integration.update({
-        where: { id: existing.id },
-        data: {
-          config,
-          status: status || 'connected',
-          lastSync: new Date()
-        }
-      })
-    } else {
-      integration = await (prisma as any).integration.create({
-        data: {
-          organizationId: session.user.organizationId,
-          provider,
-          type,
-          config,
-          status: status || 'connected',
-          lastSync: new Date()
-        }
-      })
-    }
-
     return NextResponse.json(integration)
-  } catch (error) {
-    console.error('Error saving integration:', error)
-    return NextResponse.json({ error: 'Failed to save integration' }, { status: 500 })
+  } catch (err) {
+    console.error('Error creating integration:', err)
+    return NextResponse.json({ error: 'Failed to create integration' }, { status: 500 })
   }
 }
 
-// DELETE /api/integrations (disconnect)
+// DELETE /api/integrations
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
   const { integrationId } = await request.json()
   if (!integrationId) {
     return NextResponse.json({ error: 'Missing integration ID' }, { status: 400 })
   }
-
   try {
-    // Cast prisma to any for integration delegate
-    const existing = await (prisma as any).integration.findFirst({
-      where: { organizationId: session.user.organizationId, id: integrationId }
+    const existing = await prisma.integration.findFirst({
+      where: { organizationId: session.user.organizationId, id: integrationId },
     })
     if (!existing) {
       return NextResponse.json({ error: 'Integration not found' }, { status: 404 })
     }
-    await (prisma as any).integration.delete({ where: { id: integrationId } })
+    await prisma.integration.delete({ where: { id: integrationId } })
     return NextResponse.json({ status: 'disconnected' })
-  } catch (error) {
-    console.error('Error disconnecting integration:', error)
+  } catch (err) {
+    console.error('Error deleting integration:', err)
     return NextResponse.json({ error: 'Failed to disconnect integration' }, { status: 500 })
   }
-} 
+}
