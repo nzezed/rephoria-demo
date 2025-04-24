@@ -6,6 +6,10 @@ import OpenAI from 'openai'
 import { writeFileSync, unlinkSync, createReadStream } from 'fs'
 import { join } from 'path'
 
+// Disable static prerendering for this dynamic API route
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'no-store'
+
 // Cast prisma to any to access model delegates
 const client = prisma as any
 
@@ -69,12 +73,8 @@ export async function POST(
       ],
       response_format: { type: 'json_object' }
     })
-    // Extract and narrow content for JSON.parse
-    const contentNullable = analysisRes.choices[0].message.content
-    if (contentNullable === null) {
-      throw new Error('No content received from OpenAI')
-    }
-    const analysis = JSON.parse(contentNullable)
+    // Parse analysis content with non-null assertion
+    const analysis = JSON.parse(analysisRes.choices[0].message.content!)
 
     // Store insights
     if (Array.isArray(analysis.insights)) {

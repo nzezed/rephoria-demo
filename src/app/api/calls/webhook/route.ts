@@ -23,6 +23,16 @@ export async function POST(request: Request) {
       }
     })
 
+    // Trigger asynchronous processing of this call (transcription & insights)
+    try {
+      const baseUrl = new URL(request.url).origin
+      fetch(`${baseUrl}/api/calls/${call.id}/process`, { method: 'POST' }).catch(err => {
+        console.error('Error triggering call processing:', err)
+      })
+    } catch (err) {
+      console.error('Error constructing process URL:', err)
+    }
+
     return NextResponse.json({ callId: call.id })
   } catch (error) {
     console.error('Webhook error:', error)
