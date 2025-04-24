@@ -63,7 +63,8 @@ export async function POST(
       ],
       response_format: { type: 'json_object' }
     })
-    const analysis = JSON.parse(analysisRes.choices[0].message.content)
+    // Parse analysis content after casting to string
+    const analysis = JSON.parse(analysisRes.choices[0].message.content as string)
 
     // Store insights
     if (Array.isArray(analysis.insights)) {
