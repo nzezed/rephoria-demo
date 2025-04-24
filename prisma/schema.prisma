@@ -20,6 +20,7 @@ model Organization {
   plan      String   @default("free")
   users     User[]
   agents    Agent[]
+  calls     Call[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -86,8 +87,52 @@ model Agent {
   name           String
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
+  calls          Call[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
+}
+
+model Call {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  agent          Agent?       @relation(fields: [agentId], references: [id])
+  agentId        String?
+  startTime      DateTime
+  endTime        DateTime?
+  recordingUrl   String?
+  status         String       @default("pending")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  // One-to-one relation to Transcript
+  transcript     Transcript?
+  // One-to-many relation to Insights
+  insights       Insight[]
+
+  @@index([organizationId])
+  @@index([agentId])
+}
+
+model Transcript {
+  id        String   @id @default(cuid())
+  call      Call     @relation(fields: [callId], references: [id])
+  callId    String   @unique
+  text      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Insight {
+  id         String   @id @default(cuid())
+  call       Call     @relation(fields: [callId], references: [id])
+  callId     String
+  type       String
+  content    String   @db.Text
+  importance String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([callId])
 }
