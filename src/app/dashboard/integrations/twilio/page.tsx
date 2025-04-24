@@ -1,3 +1,5 @@
+'use client';
+
 import { Card, Title, Text, Button, TextInput, Badge } from '@tremor/react';
 import { useState, useEffect } from 'react';
 
