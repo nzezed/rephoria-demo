@@ -1,145 +1,302 @@
 'use client'
 
-import { useState, useEffect, FormEvent } from 'react'
+import { useState } from 'react'
 import {
-  Card, Title, Text, Button,
-  Table, TableHead, TableRow, TableHeaderCell,
-  TableBody, TableRow as BodyRow, TableCell,
-  TextInput, TextArea,
+  Card,
+  Title,
+  Text,
+  Grid,
+  Button,
+  TextInput,
+  Select,
+  SelectItem,
+  Badge,
+  Flex,
 } from '@tremor/react'
+import {
+  PhoneIcon,
+  CloudArrowUpIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
+  ExclamationCircleIcon,
+} from '@heroicons/react/24/outline'
+import { useIntegrationStore } from '@/services/integration-manager'
+import type { Integration } from '@/services/integration-manager'
 
-interface Integration {
-  id: string
-  provider: string
-  type: string
-  config: Record<string, any>
-  status: string
-  createdAt: string
+interface IntegrationConfig {
+  apiKey?: string
+  accountId?: string
+  region?: string
+  environment?: 'production' | 'sandbox'
 }
 
+const INITIAL_INTEGRATIONS: Integration[] = [
+  {
+    id: 'twilio',
+    name: 'Twilio',
+    type: 'call_platform',
+    status: 'disconnected',
+  },
+  {
+    id: 'five9',
+    name: 'Five9',
+    type: 'call_platform',
+    status: 'disconnected',
+  },
+  {
+    id: 'genesys',
+    name: 'Genesys',
+    type: 'call_platform',
+    status: 'disconnected',
+  },
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    type: 'crm',
+    status: 'disconnected',
+  },
+  {
+    id: 'hubspot',
+    name: 'HubSpot',
+    type: 'crm',
+    status: 'disconnected',
+  },
+  {
+    id: 'zendesk',
+    name: 'Zendesk',
+    type: 'crm',
+    status: 'disconnected',
+  },
+]
+
 export default function IntegrationsPage() {
-  const [list, setList] = useState<Integration[]>([])
-  const [provider, setProvider] = useState('')
-  const [type, setType] = useState('')
-  const [configJSON, setConfigJSON] = useState('{}')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string|null>(null)
+  const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
+  const [config, setConfig] = useState<IntegrationConfig>({})
+  const { activeIntegrations, setIntegrations } = useIntegrationStore()
 
-  useEffect(() => {
-    fetchIntegrations()
-  }, [])
+  // Initialize integrations if none exist
+  if (activeIntegrations.length === 0) {
+    setIntegrations(INITIAL_INTEGRATIONS)
+  }
 
-  async function fetchIntegrations() {
-    try {
-      const res = await fetch('/api/integrations')
-      const data = await res.json()
-      setList(Array.isArray(data) ? data : [])
-    } catch (e) {
-      console.error(e)
-      setError('Failed to load integrations')
+  const handleConnect = async (integrationId: string) => {
+    const integration = activeIntegrations.find((i) => i.id === integrationId)
+    if (!integration) return
+
+    if (integration.status === 'connected') {
+      // Disconnect
+      setIntegrations(
+        activeIntegrations.map((i) =>
+          i.id === integrationId ? { ...i, status: 'disconnected', lastSync: undefined } : i
+        )
+      )
+    } else {
+      setActiveIntegration(integrationId)
+      setConfig({})
     }
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError(null)
-    let config: any
-    try {
-      config = JSON.parse(configJSON)
-    } catch {
-      setError('Config must be valid JSON')
-      return
-    }
+  const handleSaveConfig = async () => {
+    if (!activeIntegration) return
 
-    setLoading(true)
-    try {
-      const res = await fetch('/api/integrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, type, config }),
-      })
-      if (!res.ok) throw new Error('Failed to create')
-      setProvider('')
-      setType('')
-      setConfigJSON('{}')
-      await fetchIntegrations()
-    } catch (err) {
-      console.error(err)
-      setError('Error creating integration')
-    } finally {
-      setLoading(false)
+    // In a real application, this would validate the credentials
+    setIntegrations(
+      activeIntegrations.map((integration) =>
+        integration.id === activeIntegration
+          ? {
+              ...integration,
+              status: 'connected',
+              lastSync: new Date().toISOString(),
+              config,
+            }
+          : integration.type === 'call_platform' && integration.status === 'connected'
+          ? { ...integration, status: 'disconnected', lastSync: undefined }
+          : integration
+      )
+    )
+    setActiveIntegration(null)
+    setConfig({})
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return 'green'
+      case 'pending':
+        return 'yellow'
+      default:
+        return 'red'
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />
+      case 'pending':
+        return <ArrowPathIcon className="h-5 w-5 text-yellow-500 animate-spin" />
+      default:
+        return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
     }
   }
 
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-4xl space-y-8">
-      <Title>Integrations</Title>
+    <main className="space-y-6">
+      <div className="space-y-2">
+        <Title>Integrations</Title>
+        <Text>Connect Rephoria with your existing call center platforms and CRM systems.</Text>
+      </div>
 
+      {/* Call Platforms */}
       <Card>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col md:flex-row md:space-x-4">
-            <div className="flex-1">
-              <Text>Provider</Text>
-              <TextInput
-                placeholder="e.g. steam-connect"
-                value={provider}
-                onChange={(e) => setProvider(e.currentTarget.value)}
-                required
-              />
-            </div>
-            <div className="flex-1">
-              <Text>Type</Text>
-              <TextInput
-                placeholder="e.g. call_platform"
-                value={type}
-                onChange={(e) => setType(e.currentTarget.value)}
-                required
-              />
-            </div>
-          </div>
+        <Title>Call Center Platforms</Title>
+        <Text>Connect your call platform to enable real-time call analysis and insights.</Text>
+        
+        <Grid numItemsMd={3} className="gap-6 mt-6">
+          {activeIntegrations
+            .filter(integration => integration.type === 'call_platform')
+            .map(integration => (
+              <Card key={integration.id} decoration="left" decorationColor={getStatusColor(integration.status)}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <PhoneIcon className="h-5 w-5 text-gray-500" />
+                      <Title>{integration.name}</Title>
+                    </div>
+                    {getStatusIcon(integration.status)}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Badge color={getStatusColor(integration.status)}>
+                      {integration.status}
+                    </Badge>
+                    {integration.lastSync && (
+                      <Text className="text-sm">
+                        Last synced: {new Date(integration.lastSync).toLocaleString()}
+                      </Text>
+                    )}
+                  </div>
 
-          <div>
-            <Text>Config (JSON)</Text>
-            <TextArea
-              rows={4}
-              value={configJSON}
-              onChange={(e) => setConfigJSON(e.currentTarget.value)}
-              className="w-full font-mono text-sm"
-            />
-          </div>
-
-          {error && <Text className="text-red-500">{error}</Text>}
-          <Button type="submit" loading={loading}>
-            Add Integration
-          </Button>
-        </form>
-      </Card>
-
-      <Card>
-        <Title>Existing Integrations</Title>
-        <Table className="mt-4">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Provider</TableHeaderCell>
-              <TableHeaderCell>Type</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell>Created</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.map((i) => (
-              <BodyRow key={i.id}>
-                <TableCell>{i.provider}</TableCell>
-                <TableCell>{i.type}</TableCell>
-                <TableCell>{i.status}</TableCell>
-                <TableCell>
-                  {new Date(i.createdAt).toLocaleDateString()}
-                </TableCell>
-              </BodyRow>
+                  <Button
+                    size="sm"
+                    color={integration.status === 'connected' ? 'red' : 'blue'}
+                    onClick={() => handleConnect(integration.id)}
+                  >
+                    {integration.status === 'connected' ? 'Disconnect' : 'Connect'}
+                  </Button>
+                </div>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
+        </Grid>
       </Card>
+
+      {/* CRM Systems */}
+      <Card>
+        <Title>CRM Systems</Title>
+        <Text>Connect your CRM to sync customer data and enhance call insights.</Text>
+        
+        <Grid numItemsMd={3} className="gap-6 mt-6">
+          {activeIntegrations
+            .filter(integration => integration.type === 'crm')
+            .map(integration => (
+              <Card key={integration.id} decoration="left" decorationColor={getStatusColor(integration.status)}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <CloudArrowUpIcon className="h-5 w-5 text-gray-500" />
+                      <Title>{integration.name}</Title>
+                    </div>
+                    {getStatusIcon(integration.status)}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Badge color={getStatusColor(integration.status)}>
+                      {integration.status}
+                    </Badge>
+                    {integration.lastSync && (
+                      <Text className="text-sm">
+                        Last synced: {new Date(integration.lastSync).toLocaleString()}
+                      </Text>
+                    )}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    color={integration.status === 'connected' ? 'red' : 'blue'}
+                    onClick={() => handleConnect(integration.id)}
+                  >
+                    {integration.status === 'connected' ? 'Disconnect' : 'Connect'}
+                  </Button>
+                </div>
+              </Card>
+            ))}
+        </Grid>
+      </Card>
+
+      {/* Configuration Modal */}
+      {activeIntegration && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <Card className="w-full max-w-lg">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Title>Configure {activeIntegrations.find(i => i.id === activeIntegration)?.name}</Title>
+                <Text>Enter your credentials to connect the platform.</Text>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Text>API Key</Text>
+                  <TextInput
+                    placeholder="Enter your API key"
+                    value={config.apiKey || ''}
+                    onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Text>Account ID</Text>
+                  <TextInput
+                    placeholder="Enter your account ID"
+                    value={config.accountId || ''}
+                    onChange={(e) => setConfig({ ...config, accountId: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Text>Region</Text>
+                  <Select
+                    value={config.region || ''}
+                    onValueChange={(value) => setConfig({ ...config, region: value })}
+                  >
+                    <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                    <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                    <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
+                    <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                  </Select>
+                </div>
+
+                <div>
+                  <Text>Environment</Text>
+                  <Select
+                    value={config.environment || ''}
+                    onValueChange={(value) => setConfig({ ...config, environment: value as 'production' | 'sandbox' })}
+                  >
+                    <SelectItem value="sandbox">Sandbox</SelectItem>
+                    <SelectItem value="production">Production</SelectItem>
+                  </Select>
+                </div>
+              </div>
+
+              <Flex className="space-x-2 justify-end">
+                <Button variant="secondary" onClick={() => setActiveIntegration(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveConfig}>Save Configuration</Button>
+              </Flex>
+            </div>
+          </Card>
+        </div>
+      )}
     </main>
   )
 }
