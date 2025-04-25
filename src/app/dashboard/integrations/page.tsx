@@ -30,45 +30,6 @@ interface IntegrationConfig {
   environment?: 'production' | 'sandbox'
 }
 
-const INITIAL_INTEGRATIONS: Integration[] = [
-  {
-    id: 'twilio',
-    name: 'Twilio',
-    type: 'call_platform',
-    status: 'disconnected',
-  },
-  {
-    id: 'five9',
-    name: 'Five9',
-    type: 'call_platform',
-    status: 'disconnected',
-  },
-  {
-    id: 'genesys',
-    name: 'Genesys',
-    type: 'call_platform',
-    status: 'disconnected',
-  },
-  {
-    id: 'salesforce',
-    name: 'Salesforce',
-    type: 'crm',
-    status: 'disconnected',
-  },
-  {
-    id: 'hubspot',
-    name: 'HubSpot',
-    type: 'crm',
-    status: 'disconnected',
-  },
-  {
-    id: 'zendesk',
-    name: 'Zendesk',
-    type: 'crm',
-    status: 'disconnected',
-  },
-]
-
 export default function IntegrationsPage() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
   const [config, setConfig] = useState<IntegrationConfig>({})

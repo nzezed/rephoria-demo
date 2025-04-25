@@ -7,6 +7,45 @@ import type { Integration } from '@/services/integration-manager'
 // Always fetch fresh data
 export const dynamic = 'force-dynamic'
 
+const DEFAULT_INTEGRATIONS = [
+  {
+    provider: 'twilio',
+    name: 'Twilio',
+    type: 'call_platform',
+    status: 'disconnected',
+  },
+  {
+    provider: 'five9',
+    name: 'Five9',
+    type: 'call_platform',
+    status: 'disconnected',
+  },
+  {
+    provider: 'genesys',
+    name: 'Genesys',
+    type: 'call_platform',
+    status: 'disconnected',
+  },
+  {
+    provider: 'salesforce',
+    name: 'Salesforce',
+    type: 'crm',
+    status: 'disconnected',
+  },
+  {
+    provider: 'hubspot',
+    name: 'HubSpot',
+    type: 'crm',
+    status: 'disconnected',
+  },
+  {
+    provider: 'zendesk',
+    name: 'Zendesk',
+    type: 'crm',
+    status: 'disconnected',
+  },
+]
+
 // GET /api/integrations
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -14,6 +53,22 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
+    // Check if we have any integrations
+    const count = await prisma.integration.count({
+      where: { organizationId: session.user.organizationId }
+    })
+
+    // If no integrations exist, create the default ones
+    if (count === 0) {
+      await prisma.integration.createMany({
+        data: DEFAULT_INTEGRATIONS.map(integration => ({
+          ...integration,
+          organizationId: session.user.organizationId,
+        })),
+      })
+    }
+
+    // Fetch all integrations
     const integrations = await prisma.integration.findMany({
       where: { organizationId: session.user.organizationId },
       orderBy: { createdAt: 'desc' },
@@ -80,8 +135,25 @@ export async function DELETE(request: Request) {
 
 // Update an integration
 export async function PUT(request: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const integration = await request.json() as Integration
+
+    // Verify the integration belongs to the user's organization
+    const existing = await prisma.integration.findFirst({
+      where: { 
+        id: integration.id,
+        organizationId: session.user.organizationId 
+      },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Integration not found' }, { status: 404 })
+    }
 
     // Update the integration in the database
     const updated = await prisma.integration.update({
