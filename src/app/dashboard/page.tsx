@@ -16,6 +16,7 @@ import {
   BadgeDelta,
   Flex,
   ProgressBar,
+  type Color,
 } from '@tremor/react'
 import { integrationManager, useIntegrationStore } from '@/services/integration-manager'
 
@@ -45,6 +46,12 @@ interface DashboardData {
     'Customer Satisfaction': number
   }[]
 }
+
+const chartColors: Record<string, Color> = {
+  totalCalls: 'indigo',
+  avgDuration: 'rose',
+  satisfaction: 'emerald'
+} as const
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -124,7 +131,7 @@ export default function Dashboard() {
                   <Text>Progress to target ({data.totalCalls.target})</Text>
                   <Text className="text-right">{data.totalCalls.progress}%</Text>
                 </Flex>
-                <ProgressBar value={data.totalCalls.progress} className="mt-2" />
+                <ProgressBar color={chartColors.totalCalls} value={data.totalCalls.progress} className="mt-2" />
               </Card>
 
               <Card>
@@ -139,7 +146,7 @@ export default function Dashboard() {
                   <Text>Progress to target ({data.avgDuration.target})</Text>
                   <Text className="text-right">{data.avgDuration.progress}%</Text>
                 </Flex>
-                <ProgressBar value={data.avgDuration.progress} className="mt-2" />
+                <ProgressBar color={chartColors.avgDuration} value={data.avgDuration.progress} className="mt-2" />
               </Card>
 
               <Card>
@@ -154,7 +161,7 @@ export default function Dashboard() {
                   <Text>Progress to target ({data.satisfaction.target})</Text>
                   <Text className="text-right">{data.satisfaction.progress}%</Text>
                 </Flex>
-                <ProgressBar value={data.satisfaction.progress} className="mt-2" />
+                <ProgressBar color={chartColors.satisfaction} value={data.satisfaction.progress} className="mt-2" />
               </Card>
             </Grid>
 
@@ -167,7 +174,14 @@ export default function Dashboard() {
                   data={data.trends}
                   index="date"
                   categories={['Total Calls', 'Avg Duration', 'Customer Satisfaction']}
-                  colors={['blue', 'red', 'green']}
+                  colors={[chartColors.totalCalls, chartColors.avgDuration, chartColors.satisfaction]}
+                  valueFormatter={(number: number) => number.toString()}
+                  showLegend
+                  showGridLines
+                  startEndOnly
+                  showYAxis
+                  showXAxis
+                  curveType="monotone"
                 />
               </Card>
             </div>
