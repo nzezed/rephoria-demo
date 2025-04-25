@@ -1,5 +1,5 @@
-import { create, StateCreator } from 'zustand'
-import { persist, PersistOptions } from 'zustand/middleware'
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 interface Integration {
   id: string
@@ -49,22 +49,10 @@ interface IntegrationStore {
   removeIntegration: (integrationId: string) => void
 }
 
-type SetState = (
-  partial: IntegrationStore | Partial<IntegrationStore> | ((state: IntegrationStore) => IntegrationStore | Partial<IntegrationStore>),
-  replace?: boolean
-) => void
-
-type GetState = () => IntegrationStore
-
-type IntegrationPersist = (
-  config: StateCreator<IntegrationStore>,
-  options: PersistOptions<IntegrationStore>
-) => StateCreator<IntegrationStore>
-
 // Store to manage integration state
-const useIntegrationStore = create<IntegrationStore>(
-  (persist as IntegrationPersist)(
-    (set: SetState, get: GetState) => ({
+const useIntegrationStore = create<IntegrationStore>()(
+  persist(
+    (set, get) => ({
       activeIntegrations: [],
       setIntegrations: (integrations: Integration[]) => set({ activeIntegrations: integrations }),
       getActiveCallPlatform: () => {
