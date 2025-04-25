@@ -21,6 +21,7 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { useIntegrationStore } from '@/services/integration-manager'
+import { integrationManager } from '@/services/integration-manager'
 import type { Integration } from '@/services/integration-manager'
 
 interface IntegrationConfig {
@@ -35,6 +36,20 @@ export default function IntegrationsPage() {
   const [config, setConfig] = useState<IntegrationConfig>({})
   const { activeIntegrations, addOrUpdateIntegration } = useIntegrationStore()
 
+  // Initialize available integrations
+  useEffect(() => {
+    if (activeIntegrations.length === 0) {
+      // Add Twilio as an available integration if it's not already present
+      const twilioIntegration: Integration = {
+        id: 'twilio',
+        name: 'Twilio',
+        type: 'call_platform',
+        status: 'disconnected'
+      }
+      addOrUpdateIntegration(twilioIntegration)
+    }
+  }, [activeIntegrations, addOrUpdateIntegration])
+
   const handleConnect = async (integrationId: string) => {
     const integration = activeIntegrations.find((i) => i.id === integrationId)
     if (!integration) return
@@ -42,12 +57,16 @@ export default function IntegrationsPage() {
     if (integration.status === 'connected') {
       // Disconnect
       try {
-        addOrUpdateIntegration({
-          ...integration,
-          status: 'disconnected',
-          lastSync: undefined,
-          config: undefined,
-        })
+        if (integration.id === 'twilio') {
+          await integrationManager.disconnectTwilio()
+        } else {
+          addOrUpdateIntegration({
+            ...integration,
+            status: 'disconnected',
+            lastSync: undefined,
+            config: undefined,
+          })
+        }
       } catch (error) {
         console.error('Error disconnecting integration:', error)
       }
@@ -64,12 +83,22 @@ export default function IntegrationsPage() {
     if (!integration) return
 
     try {
-      addOrUpdateIntegration({
-        ...integration,
-        status: 'connected',
-        lastSync: new Date().toISOString(),
-        config,
-      })
+      if (integration.id === 'twilio') {
+        const success = await integrationManager.configureTwilio(
+          config.accountSid || '',
+          config.authToken || ''
+        )
+        if (!success) {
+          throw new Error('Failed to configure Twilio')
+        }
+      } else {
+        addOrUpdateIntegration({
+          ...integration,
+          status: 'connected',
+          lastSync: new Date().toISOString(),
+          config,
+        })
+      }
       setActiveIntegration(null)
       setConfig({})
     } catch (error) {
