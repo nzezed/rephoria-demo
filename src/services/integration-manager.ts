@@ -1,13 +1,17 @@
-import { create } from 'zustand'
-import { type StateCreator } from 'zustand'
+import { create, StateCreator } from 'zustand'
+import { persist, PersistOptions } from 'zustand/middleware'
 
-export interface Integration {
+interface Integration {
   id: string
   name: string
   type: 'call_platform' | 'crm'
   status: 'connected' | 'disconnected' | 'pending'
   lastSync?: string
-  config?: Record<string, any>
+  config?: {
+    accountSid?: string
+    authToken?: string
+    [key: string]: any
+  }
 }
 
 interface DashboardData {
@@ -41,73 +45,114 @@ interface IntegrationStore {
   activeIntegrations: Integration[]
   setIntegrations: (integrations: Integration[]) => void
   getActiveCallPlatform: () => Integration | null
-  loadIntegrations: () => Promise<void>
-  updateIntegration: (integration: Integration) => Promise<void>
+  addOrUpdateIntegration: (integration: Integration) => void
+  removeIntegration: (integrationId: string) => void
 }
 
+type SetState = (
+  partial: IntegrationStore | Partial<IntegrationStore> | ((state: IntegrationStore) => IntegrationStore | Partial<IntegrationStore>),
+  replace?: boolean
+) => void
+
+type GetState = () => IntegrationStore
+
+type IntegrationPersist = (
+  config: StateCreator<IntegrationStore>,
+  options: PersistOptions<IntegrationStore>
+) => StateCreator<IntegrationStore>
+
 // Store to manage integration state
-const useIntegrationStore = create<IntegrationStore>((set, get) => ({
-  activeIntegrations: [],
-  setIntegrations: (integrations: Integration[]) => set({ activeIntegrations: integrations }),
-  getActiveCallPlatform: () => {
-    const { activeIntegrations } = get()
-    return activeIntegrations.find(
-      (i: Integration) => i.type === 'call_platform' && i.status === 'connected'
-    ) || null
-  },
-  loadIntegrations: async () => {
-    try {
-      const response = await fetch('/api/integrations')
-      if (!response.ok) {
-        throw new Error('Failed to load integrations')
+const useIntegrationStore = create<IntegrationStore>(
+  (persist as IntegrationPersist)(
+    (set: SetState, get: GetState) => ({
+      activeIntegrations: [],
+      setIntegrations: (integrations: Integration[]) => set({ activeIntegrations: integrations }),
+      getActiveCallPlatform: () => {
+        const { activeIntegrations } = get()
+        return activeIntegrations.find(
+          (integration: Integration) => integration.type === 'call_platform' && integration.status === 'connected'
+        ) || null
+      },
+      addOrUpdateIntegration: (integration: Integration) => {
+        const { activeIntegrations } = get()
+        const existingIndex = activeIntegrations.findIndex((i: Integration) => i.id === integration.id)
+        
+        if (existingIndex >= 0) {
+          const updatedIntegrations = [...activeIntegrations]
+          updatedIntegrations[existingIndex] = integration
+          set({ activeIntegrations: updatedIntegrations })
+        } else {
+          set({ activeIntegrations: [...activeIntegrations, integration] })
+        }
+      },
+      removeIntegration: (integrationId: string) => {
+        const { activeIntegrations } = get()
+        set({
+          activeIntegrations: activeIntegrations.filter((i: Integration) => i.id !== integrationId)
+        })
       }
-      const integrations = await response.json()
-      set({ activeIntegrations: integrations })
-    } catch (error) {
-      console.error('Error loading integrations:', error)
+    }),
+    {
+      name: 'rephoria-integrations',
+      version: 1,
     }
-  },
-  updateIntegration: async (integration: Integration) => {
-    try {
-      const response = await fetch('/api/integrations', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(integration),
-      })
-      if (!response.ok) {
-        throw new Error('Failed to update integration')
-      }
-      // Update local state after successful save
-      const { activeIntegrations } = get()
-      set({
-        activeIntegrations: activeIntegrations.map((i) =>
-          i.id === integration.id ? integration : i
-        ),
-      })
-    } catch (error) {
-      console.error('Error updating integration:', error)
-      throw error
-    }
-  },
-}))
+  )
+)
+
+interface IntegrationManager {
+  configureTwilio(accountSid: string, authToken: string): Promise<boolean>
+  disconnectTwilio(): Promise<void>
+  fetchDashboardData(): Promise<DashboardData>
+}
 
 // Data fetching based on active integration
-class IntegrationManager {
-  private static instance: IntegrationManager
+class IntegrationManagerImpl implements IntegrationManager {
+  private static instance: IntegrationManagerImpl
   private store = useIntegrationStore
 
   private constructor() {
-    // Load integrations when the manager is instantiated
-    this.store.getState().loadIntegrations()
+    // Initialize with stored data
+    this.initializeFromStorage()
   }
 
-  static getInstance(): IntegrationManager {
-    if (!IntegrationManager.instance) {
-      IntegrationManager.instance = new IntegrationManager()
+  static getInstance(): IntegrationManagerImpl {
+    if (!IntegrationManagerImpl.instance) {
+      IntegrationManagerImpl.instance = new IntegrationManagerImpl()
     }
-    return IntegrationManager.instance
+    return IntegrationManagerImpl.instance
+  }
+
+  private async initializeFromStorage() {
+    // The store will automatically rehydrate from localStorage
+    // We can add any additional initialization logic here if needed
+  }
+
+  async configureTwilio(accountSid: string, authToken: string): Promise<boolean> {
+    try {
+      // Here you would typically validate the credentials with Twilio
+      // For now, we'll just store them
+      const twilioIntegration: Integration = {
+        id: 'twilio',
+        name: 'Twilio',
+        type: 'call_platform',
+        status: 'connected',
+        lastSync: new Date().toISOString(),
+        config: {
+          accountSid,
+          authToken
+        }
+      }
+
+      this.store.getState().addOrUpdateIntegration(twilioIntegration)
+      return true
+    } catch (error) {
+      console.error('Error configuring Twilio:', error)
+      return false
+    }
+  }
+
+  async disconnectTwilio() {
+    this.store.getState().removeIntegration('twilio')
   }
 
   async fetchDashboardData(): Promise<DashboardData> {
@@ -118,14 +163,14 @@ class IntegrationManager {
     }
 
     try {
-      // Fetch data from the appropriate API endpoint
+      // Here we would integrate with the actual platform's API
       switch (activePlatform.id) {
         case 'twilio':
-          return await this.fetchTwilioData()
+          return await this.fetchTwilioData(activePlatform.config)
         case 'five9':
-          return await this.fetchFive9Data()
+          return await this.fetchFive9Data(activePlatform.config)
         case 'genesys':
-          return await this.fetchGenesysData()
+          return await this.fetchGenesysData(activePlatform.config)
         default:
           return this.getPlaceholderData()
       }
@@ -166,24 +211,59 @@ class IntegrationManager {
     }
   }
 
-  private async fetchTwilioData(): Promise<DashboardData> {
-    const response = await fetch('/api/integrations/twilio/data')
-    if (!response.ok) {
-      throw new Error('Failed to fetch Twilio data')
+  private async fetchTwilioData(config: Record<string, any> | undefined): Promise<DashboardData> {
+    if (!config?.accountSid || !config?.authToken) {
+      throw new Error('Twilio configuration missing')
     }
-    return response.json()
+
+    try {
+      // Here you would make actual API calls to Twilio
+      // For now, return enhanced placeholder data
+      return {
+        totalCalls: {
+          metric: '150',
+          progress: 75,
+          target: '200',
+          delta: '+15%',
+        },
+        avgDuration: {
+          metric: '4.5m',
+          progress: 90,
+          target: '5m',
+          delta: '+5%',
+        },
+        satisfaction: {
+          metric: '4.2/5',
+          progress: 84,
+          target: '5/5',
+          delta: '+10%',
+        },
+        trends: [
+          {
+            date: new Date().toISOString().split('T')[0],
+            'Total Calls': 150,
+            'Avg Duration': 4.5,
+            'Customer Satisfaction': 4.2,
+          },
+        ],
+      }
+    } catch (error) {
+      console.error('Error fetching Twilio data:', error)
+      throw error
+    }
   }
 
-  private async fetchFive9Data(): Promise<DashboardData> {
+  private async fetchFive9Data(config: Record<string, any> | undefined): Promise<DashboardData> {
     // Implement Five9 API integration
     throw new Error('Not implemented')
   }
 
-  private async fetchGenesysData(): Promise<DashboardData> {
+  private async fetchGenesysData(config: Record<string, any> | undefined): Promise<DashboardData> {
     // Implement Genesys API integration
     throw new Error('Not implemented')
   }
 }
 
-export const integrationManager = IntegrationManager.getInstance()
-export { useIntegrationStore } 
+export const integrationManager = IntegrationManagerImpl.getInstance()
+export { useIntegrationStore }
+export type { Integration, IntegrationManager } 
