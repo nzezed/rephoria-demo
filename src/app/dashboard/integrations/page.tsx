@@ -24,8 +24,8 @@ import { useIntegrationStore } from '@/services/integration-manager'
 import type { Integration } from '@/services/integration-manager'
 
 interface IntegrationConfig {
-  apiKey?: string
-  accountId?: string
+  authToken?: string
+  accountSid?: string
   region?: string
   environment?: 'production' | 'sandbox'
 }
@@ -101,6 +101,100 @@ export default function IntegrationsPage() {
         return <ArrowPathIcon className="h-5 w-5 text-yellow-500 animate-spin" />
       default:
         return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+    }
+  }
+
+  const renderConfigFields = (provider: string) => {
+    switch (provider) {
+      case 'twilio':
+        return (
+          <>
+            <div>
+              <Text>Account SID</Text>
+              <Text className="text-sm text-gray-500 mb-2">
+                Your Twilio Account SID starts with "AC". Find it in your Twilio Console Dashboard.
+              </Text>
+              <TextInput
+                placeholder="AC..."
+                value={config.accountSid || ''}
+                onChange={(e) => setConfig({ ...config, accountSid: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Text>Auth Token</Text>
+              <Text className="text-sm text-gray-500 mb-2">
+                Your Twilio Auth Token is a 32-character string. Find it in your Twilio Console Dashboard.
+              </Text>
+              <TextInput
+                type="password"
+                placeholder="Enter your Auth Token"
+                value={config.authToken || ''}
+                onChange={(e) => setConfig({ ...config, authToken: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Text>Environment</Text>
+              <Text className="text-sm text-gray-500 mb-2">
+                Choose 'Production' for live calls or 'Sandbox' for testing.
+              </Text>
+              <Select
+                value={config.environment || ''}
+                onValueChange={(value) => setConfig({ ...config, environment: value as 'production' | 'sandbox' })}
+              >
+                <SelectItem value="sandbox">Sandbox</SelectItem>
+                <SelectItem value="production">Production</SelectItem>
+              </Select>
+            </div>
+          </>
+        )
+      default:
+        return (
+          <>
+            <div>
+              <Text>API Key</Text>
+              <TextInput
+                placeholder="Enter your API key"
+                value={config.authToken || ''}
+                onChange={(e) => setConfig({ ...config, authToken: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Text>Account ID</Text>
+              <TextInput
+                placeholder="Enter your account ID"
+                value={config.accountSid || ''}
+                onChange={(e) => setConfig({ ...config, accountSid: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Text>Region</Text>
+              <Select
+                value={config.region || ''}
+                onValueChange={(value) => setConfig({ ...config, region: value })}
+              >
+                <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
+                <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+              </Select>
+            </div>
+
+            <div>
+              <Text>Environment</Text>
+              <Select
+                value={config.environment || ''}
+                onValueChange={(value) => setConfig({ ...config, environment: value as 'production' | 'sandbox' })}
+              >
+                <SelectItem value="sandbox">Sandbox</SelectItem>
+                <SelectItem value="production">Production</SelectItem>
+              </Select>
+            </div>
+          </>
+        )
     }
   }
 
@@ -208,47 +302,7 @@ export default function IntegrationsPage() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <Text>API Key</Text>
-                  <TextInput
-                    placeholder="Enter your API key"
-                    value={config.apiKey || ''}
-                    onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Text>Account ID</Text>
-                  <TextInput
-                    placeholder="Enter your account ID"
-                    value={config.accountId || ''}
-                    onChange={(e) => setConfig({ ...config, accountId: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Text>Region</Text>
-                  <Select
-                    value={config.region || ''}
-                    onValueChange={(value) => setConfig({ ...config, region: value })}
-                  >
-                    <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                    <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
-                    <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
-                    <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
-                  </Select>
-                </div>
-
-                <div>
-                  <Text>Environment</Text>
-                  <Select
-                    value={config.environment || ''}
-                    onValueChange={(value) => setConfig({ ...config, environment: value as 'production' | 'sandbox' })}
-                  >
-                    <SelectItem value="sandbox">Sandbox</SelectItem>
-                    <SelectItem value="production">Production</SelectItem>
-                  </Select>
-                </div>
+                {renderConfigFields(activeIntegration)}
               </div>
 
               <Flex className="space-x-2 justify-end">

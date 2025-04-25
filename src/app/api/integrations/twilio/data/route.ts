@@ -19,14 +19,14 @@ export async function GET() {
     }
 
     const config = integration.config as any
-    if (!config.accountId || !config.apiKey) {
+    if (!config.accountSid || !config.authToken) {
       return NextResponse.json({
         error: 'Invalid Twilio configuration'
       }, { status: 400 })
     }
 
     // Initialize Twilio client
-    const client = twilio(config.accountId, config.apiKey)
+    const client = twilio(config.accountSid, config.authToken)
     
     // Get today's date range
     const today = new Date()
