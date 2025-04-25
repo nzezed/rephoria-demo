@@ -86,15 +86,16 @@ export async function POST(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const { provider, type, config, status } = await request.json()
-  if (!provider || !type) {
-    return NextResponse.json({ error: 'Provider and type are required' }, { status: 400 })
+  const { provider, name, type, config, status } = await request.json()
+  if (!provider || !type || !name) {
+    return NextResponse.json({ error: 'Provider, type, and name are required' }, { status: 400 })
   }
   try {
     const integration = await prisma.integration.create({
       data: {
         organizationId: session.user.organizationId,
         provider,
+        name,
         type,
         config,
         status: status || 'connected',

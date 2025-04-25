@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { integrationManager } from '@/services/integration-manager'
+import { ChangeEvent } from 'react'
 
 export default function IntegrationsPage() {
   const [accountSid, setAccountSid] = useState('')
@@ -36,6 +37,9 @@ export default function IntegrationsPage() {
       console.error('Error disconnecting Twilio:', error)
     }
   }
+
+  const handleAccountSidChange = (e: ChangeEvent<HTMLInputElement>) => setAccountSid(e.target.value)
+  const handleAuthTokenChange = (e: ChangeEvent<HTMLInputElement>) => setAuthToken(e.target.value)
 
   const twilioIntegration = activeIntegrations.find(i => i.id === 'twilio')
 
@@ -82,7 +86,7 @@ export default function IntegrationsPage() {
                         <Input
                           id="accountSid"
                           value={accountSid}
-                          onChange={(e) => setAccountSid(e.target.value)}
+                          onChange={handleAccountSidChange}
                           placeholder="Enter your Twilio Account SID"
                         />
                       </div>
@@ -92,7 +96,7 @@ export default function IntegrationsPage() {
                           id="authToken"
                           type="password"
                           value={authToken}
-                          onChange={(e) => setAuthToken(e.target.value)}
+                          onChange={handleAuthTokenChange}
                           placeholder="Enter your Twilio Auth Token"
                         />
                       </div>

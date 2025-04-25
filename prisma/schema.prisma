@@ -144,6 +144,7 @@ model Integration {
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   provider       String       // e.g. "twilio", "steam-connect"
+  name           String       // Display name of the integration
   type           String       // e.g. "call_platform" | "crm"
   status         String       @default("disconnected")
   config         Json?        // provider-specific credentials/config
