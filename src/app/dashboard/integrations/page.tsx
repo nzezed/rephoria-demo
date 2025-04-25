@@ -33,12 +33,7 @@ interface IntegrationConfig {
 export default function IntegrationsPage() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
   const [config, setConfig] = useState<IntegrationConfig>({})
-  const { activeIntegrations, loadIntegrations, updateIntegration } = useIntegrationStore()
-
-  // Load integrations on mount
-  useEffect(() => {
-    loadIntegrations()
-  }, [loadIntegrations])
+  const { activeIntegrations, addOrUpdateIntegration } = useIntegrationStore()
 
   const handleConnect = async (integrationId: string) => {
     const integration = activeIntegrations.find((i) => i.id === integrationId)
@@ -47,7 +42,7 @@ export default function IntegrationsPage() {
     if (integration.status === 'connected') {
       // Disconnect
       try {
-        await updateIntegration({
+        addOrUpdateIntegration({
           ...integration,
           status: 'disconnected',
           lastSync: undefined,
@@ -69,7 +64,7 @@ export default function IntegrationsPage() {
     if (!integration) return
 
     try {
-      await updateIntegration({
+      addOrUpdateIntegration({
         ...integration,
         status: 'connected',
         lastSync: new Date().toISOString(),
