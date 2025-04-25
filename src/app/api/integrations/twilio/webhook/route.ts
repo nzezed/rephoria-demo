@@ -1,107 +1,91 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import twilio from 'twilio';
 import { headers } from 'next/headers';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Integration } from '@prisma/client';
 
 // Twilio TwiML helper
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
-// Validate that the request is coming from Twilio
-async function validateTwilioRequest(request: Request, headersList: Headers): Promise<boolean> {
-  try {
-    const twilioSignature = headersList.get('x-twilio-signature');
-    const webhookUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}/api/integrations/twilio/webhook`
-      : `${process.env.NEXTAUTH_URL}/api/integrations/twilio/webhook`;
-
-    // Get form data and convert to object for validation
-    const formData = await request.clone().formData();
-    const params: Record<string, string> = {};
-    formData.forEach((value, key) => {
-      params[key] = value.toString();
-    });
-
-    // Get the raw body and validate the request
-    const validator = twilio.webhook(process.env.TWILIO_WEBHOOK_SECRET || '');
-    return validator(webhookUrl, params, twilioSignature || '');
-  } catch (error) {
-    console.error('Error validating Twilio request:', error);
-    return false;
-  }
+interface TwilioConfig {
+  apiKey: string;
+  accountId: string;
+  region?: string;
+  environment?: 'production' | 'sandbox';
 }
 
-export async function POST(request: Request) {
+function isTwilioConfig(config: unknown): config is TwilioConfig {
+  if (!config || typeof config !== 'object') return false;
+  const c = config as Record<string, unknown>;
+  return typeof c.apiKey === 'string' && typeof c.accountId === 'string';
+}
+
+/**
+ * Validates that the incoming request is from Twilio using stored credentials
+ */
+async function validateTwilioRequest(webhookUrl: string, params: any, twilioSignature: string | null): Promise<boolean> {
+  if (!twilioSignature) {
+    console.error('No Twilio signature found in request')
+    return false
+  }
+
   try {
-    const headersList = headers();
-    
-    // Validate the request is from Twilio
-    const isValid = await validateTwilioRequest(request, headersList);
-    if (!isValid) {
-      console.error('Invalid Twilio signature');
-      return new NextResponse('Invalid signature', { status: 403 });
-    }
-    
-    const formData = await request.formData();
-    
-    // Extract call information from Twilio's request
-    const callSid = formData.get('CallSid') as string;
-    const from = formData.get('From') as string;
-    const to = formData.get('To') as string;
-    const direction = formData.get('Direction') as string;
-    
-    // Get organization based on the Twilio number (To number for incoming calls)
+    // Find the active Twilio integration
     const integration = await prisma.integration.findFirst({
       where: {
         provider: 'twilio',
-        status: 'connected',
-        phoneNumbers: {
-          has: to
-        }
-      },
-      include: {
-        organization: true,
-      },
+        status: 'connected'
+      }
     });
 
-    if (!integration) {
-      console.error(`No organization found for Twilio number ${to}`);
-      return new NextResponse('Organization not found', { status: 404 });
+    if (!integration?.config) {
+      console.error('No active Twilio integration found')
+      return false
     }
 
-    // Create a new call record
-    const call = await prisma.call.create({
-      data: {
-        organizationId: integration.organization.id,
-        status: 'in-progress',
-        startTime: new Date(),
-        // Find an available agent or leave it null for now
-        // agentId: availableAgent?.id,
-        recordingUrl: null, // Will be updated when recording is available
-      },
-    });
+    // Use the stored auth token from the integration config
+    const configData = integration.config as unknown
+    if (!isTwilioConfig(configData)) {
+      console.error('Invalid Twilio configuration')
+      return false
+    }
 
-    // Generate TwiML response
-    const twiml = new VoiceResponse();
-    
-    // Start recording
-    twiml.record({
-      action: `/api/integrations/twilio/recording-status?callId=${call.id}`,
-      recordingStatusCallback: `/api/integrations/twilio/recording-ready?callId=${call.id}`,
-      playBeep: false,
-      trim: 'trim-silence',
-    });
+    const authToken = configData.apiKey
+    if (!authToken) {
+      console.error('No Twilio auth token found in integration config')
+      return false
+    }
 
-    // Return TwiML response
-    return new NextResponse(twiml.toString(), {
-      headers: {
-        'Content-Type': 'text/xml',
-      },
-    });
-
+    // Validate the request using the stored auth token
+    const validator = twilio.webhook(authToken)
+    const isValid = validator(webhookUrl, params, twilioSignature)
+    return Boolean(isValid)
   } catch (error) {
-    console.error('Error processing Twilio webhook:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error validating Twilio webhook:', error)
+    return false
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const params = await request.json()
+  const twilioSignature = request.headers.get('X-Twilio-Signature')
+  const webhookUrl = request.url
+
+  // Validate the request is from Twilio
+  const isValid = await validateTwilioRequest(webhookUrl, params, twilioSignature)
+  if (!isValid) {
+    return new Response('Invalid signature', { status: 403 })
+  }
+
+  try {
+    // Process the webhook data
+    // TODO: Implement webhook processing logic
+    console.log('Received valid Twilio webhook:', params)
+    
+    return new Response('Webhook processed successfully', { status: 200 })
+  } catch (error) {
+    console.error('Error processing Twilio webhook:', error)
+    return new Response('Internal server error', { status: 500 })
   }
 }
 
@@ -113,7 +97,12 @@ export async function PUT(request: Request) {
     const headersList = headers();
     
     // Validate the request is from Twilio
-    const isValid = await validateTwilioRequest(request, headersList);
+    const isValid = await validateTwilioRequest(
+      request.url, 
+      {}, 
+      request.headers.get('X-Twilio-Signature')
+    );
+    
     if (!isValid) {
       console.error('Invalid Twilio signature');
       return new NextResponse('Invalid signature', { status: 403 });
