@@ -41,6 +41,8 @@ interface IntegrationStore {
   activeIntegrations: Integration[]
   setIntegrations: (integrations: Integration[]) => void
   getActiveCallPlatform: () => Integration | null
+  loadIntegrations: () => Promise<void>
+  updateIntegration: (integration: Integration) => Promise<void>
 }
 
 // Store to manage integration state
@@ -53,6 +55,42 @@ const useIntegrationStore = create<IntegrationStore>((set, get) => ({
       (i: Integration) => i.type === 'call_platform' && i.status === 'connected'
     ) || null
   },
+  loadIntegrations: async () => {
+    try {
+      const response = await fetch('/api/integrations')
+      if (!response.ok) {
+        throw new Error('Failed to load integrations')
+      }
+      const integrations = await response.json()
+      set({ activeIntegrations: integrations })
+    } catch (error) {
+      console.error('Error loading integrations:', error)
+    }
+  },
+  updateIntegration: async (integration: Integration) => {
+    try {
+      const response = await fetch('/api/integrations', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(integration),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to update integration')
+      }
+      // Update local state after successful save
+      const { activeIntegrations } = get()
+      set({
+        activeIntegrations: activeIntegrations.map((i) =>
+          i.id === integration.id ? integration : i
+        ),
+      })
+    } catch (error) {
+      console.error('Error updating integration:', error)
+      throw error
+    }
+  },
 }))
 
 // Data fetching based on active integration
@@ -60,7 +98,10 @@ class IntegrationManager {
   private static instance: IntegrationManager
   private store = useIntegrationStore
 
-  private constructor() {}
+  private constructor() {
+    // Load integrations when the manager is instantiated
+    this.store.getState().loadIntegrations()
+  }
 
   static getInstance(): IntegrationManager {
     if (!IntegrationManager.instance) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Card,
   Title,
@@ -72,12 +72,12 @@ const INITIAL_INTEGRATIONS: Integration[] = [
 export default function IntegrationsPage() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
   const [config, setConfig] = useState<IntegrationConfig>({})
-  const { activeIntegrations, setIntegrations } = useIntegrationStore()
+  const { activeIntegrations, loadIntegrations, updateIntegration } = useIntegrationStore()
 
-  // Initialize integrations if none exist
-  if (activeIntegrations.length === 0) {
-    setIntegrations(INITIAL_INTEGRATIONS)
-  }
+  // Load integrations on mount
+  useEffect(() => {
+    loadIntegrations()
+  }, [loadIntegrations])
 
   const handleConnect = async (integrationId: string) => {
     const integration = activeIntegrations.find((i) => i.id === integrationId)
@@ -85,11 +85,16 @@ export default function IntegrationsPage() {
 
     if (integration.status === 'connected') {
       // Disconnect
-      setIntegrations(
-        activeIntegrations.map((i) =>
-          i.id === integrationId ? { ...i, status: 'disconnected', lastSync: undefined } : i
-        )
-      )
+      try {
+        await updateIntegration({
+          ...integration,
+          status: 'disconnected',
+          lastSync: undefined,
+          config: undefined,
+        })
+      } catch (error) {
+        console.error('Error disconnecting integration:', error)
+      }
     } else {
       setActiveIntegration(integrationId)
       setConfig({})
@@ -99,23 +104,21 @@ export default function IntegrationsPage() {
   const handleSaveConfig = async () => {
     if (!activeIntegration) return
 
-    // In a real application, this would validate the credentials
-    setIntegrations(
-      activeIntegrations.map((integration) =>
-        integration.id === activeIntegration
-          ? {
-              ...integration,
-              status: 'connected',
-              lastSync: new Date().toISOString(),
-              config,
-            }
-          : integration.type === 'call_platform' && integration.status === 'connected'
-          ? { ...integration, status: 'disconnected', lastSync: undefined }
-          : integration
-      )
-    )
-    setActiveIntegration(null)
-    setConfig({})
+    const integration = activeIntegrations.find((i) => i.id === activeIntegration)
+    if (!integration) return
+
+    try {
+      await updateIntegration({
+        ...integration,
+        status: 'connected',
+        lastSync: new Date().toISOString(),
+        config,
+      })
+      setActiveIntegration(null)
+      setConfig({})
+    } catch (error) {
+      console.error('Error saving integration config:', error)
+    }
   }
 
   const getStatusColor = (status: string) => {

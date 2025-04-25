@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import type { Integration } from '@/services/integration-manager'
 
 // Always fetch fresh data
 export const dynamic = 'force-dynamic'
@@ -74,5 +75,27 @@ export async function DELETE(request: Request) {
   } catch (err) {
     console.error('Error deleting integration:', err)
     return NextResponse.json({ error: 'Failed to disconnect integration' }, { status: 500 })
+  }
+}
+
+// Update an integration
+export async function PUT(request: Request) {
+  try {
+    const integration = await request.json() as Integration
+
+    // Update the integration in the database
+    const updated = await prisma.integration.update({
+      where: { id: integration.id },
+      data: {
+        status: integration.status,
+        config: integration.config,
+        lastSync: integration.lastSync,
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('Error updating integration:', error)
+    return NextResponse.json({ error: 'Failed to update integration' }, { status: 500 })
   }
 }
