@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { generateToken } from '@/lib/token';
 
+export const runtime = 'nodejs';
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),

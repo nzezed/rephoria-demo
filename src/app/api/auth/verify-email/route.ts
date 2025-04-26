@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth/auth.service';
 import { z } from 'zod';
 
+export const runtime = 'nodejs';
+
 const verifyEmailSchema = z.object({
   token: z.string(),
 });

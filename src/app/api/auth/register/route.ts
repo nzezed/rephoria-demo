@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth/auth.service';
 import { z } from 'zod';
 
+export const runtime = 'nodejs';
+
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
