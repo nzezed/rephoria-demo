@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { CallTranscript, CallSentiment, CallSummary, TranscriptSegment, CustomerHistory } from '@/types/platform-integration'
+import { CallTranscript, CallSentiment, CallSummary, TranscriptSegment, CustomerHistory } from '../../types/platform-integration'
 
 export class CallAnalyzer {
   private openai: OpenAI

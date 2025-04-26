@@ -15,7 +15,7 @@ import {
   ListItem,
 } from '@tremor/react'
 import { useIntegrationStore } from '@/services/integration-manager'
-import { CallData, CallTranscript, CallSentiment } from '@/lib/platform-integration/types'
+import { CallData, CallTranscript, CallSentiment } from '../../../types/platform-integration'
 
 interface LiveCall extends CallData {
   transcript?: CallTranscript

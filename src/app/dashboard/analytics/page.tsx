@@ -17,7 +17,7 @@ import {
   LineChart,
 } from '@tremor/react'
 import { useIntegrationStore } from '@/services/integration-manager'
-import { CallSummary, AgentPerformance } from '@/types/platform-integration'
+import { CallSummary, AgentPerformance } from '../../../types/platform-integration'
 
 interface AnalyticsData {
   callSummaries: CallSummary[]

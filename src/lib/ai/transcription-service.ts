@@ -1,4 +1,4 @@
-import { CallTranscript, TranscriptSegment } from '@/types/platform-integration'
+import { CallTranscript, TranscriptSegment } from '../../types/platform-integration'
 
 export class TranscriptionService {
   private activeTranscriptions: Map<string, CallTranscript> = new Map()
