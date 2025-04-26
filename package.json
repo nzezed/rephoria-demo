@@ -31,6 +31,7 @@
     "next": "14.1.0",
     "next-auth": "^4.24.11",
     "openai": "^4.95.1",
+    "purecloud-platform-client-v2": "^109.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.3.8",
@@ -38,14 +39,14 @@
     "tailwind-merge": "^3.2.0",
     "tailwindcss-animate": "^1.0.7",
     "twilio": "^5.5.2",
-    "zustand": "^5.0.3",
-    "purecloud-platform-client-v2": "^109.0.0",
-    "ws": "^8.13.0"
+    "ws": "^8.13.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
+    "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
     "prisma": "^6.6.0",
