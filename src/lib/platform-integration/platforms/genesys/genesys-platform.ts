@@ -1,4 +1,4 @@
-import { platformApi, notificationsApi, UsersApi, RoutingApi, AnalyticsApi } from 'purecloud-platform-client-v2'
+import * as PureCloud from 'purecloud-platform-client-v2'
 import {
   PlatformConfig,
   PlatformEvents,
@@ -6,7 +6,7 @@ import {
   HistoricalQuery,
   HistoricalData,
   PlatformCapabilities,
-} from '../../types'
+} from '@/types/platform-integration'
 import { BasePlatformIntegration } from '../../base-platform'
 import { GenesysWebSocket } from './genesys-websocket'
 import { GenesysApiClient } from './genesys-api-client'
@@ -34,6 +34,9 @@ export class GenesysPlatform extends BasePlatformIntegration {
         callRecording: true,
         customEvents: true,
         webhooks: true,
+        liveTranscription: false,
+        sentimentAnalysis: false,
+        aiAssistance: false
       },
       limits: {
         maxPollingRate: 1000, // 1 second minimum between polls
@@ -122,6 +125,10 @@ export class GenesysPlatform extends BasePlatformIntegration {
         serviceLevel: queueMetrics.serviceLevel,
         abandonRate: queueMetrics.abandonRate,
         callsInLastHour: queueMetrics.callsInLastHour,
+        sentiment: {
+          average: 0,
+          trend: 'STABLE'
+        },
         metadata: {
           queueDetails: queueMetrics.queueDetails,
           agentStates: agentMetrics.agentStates,
