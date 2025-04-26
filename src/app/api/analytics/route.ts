@@ -141,4 +141,46 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
+}
+
+export async function GET() {
+  try {
+    // Return placeholder data when no integration is connected
+    const placeholderData = {
+      totalCalls: {
+        metric: '0',
+        progress: 0,
+        target: '100',
+        delta: '0%'
+      },
+      avgDuration: {
+        metric: '0s',
+        progress: 0,
+        target: '180s',
+        delta: '0%'
+      },
+      satisfaction: {
+        metric: '0%',
+        progress: 0,
+        target: '95%',
+        delta: '0%'
+      },
+      trends: [
+        {
+          date: new Date().toISOString().split('T')[0],
+          'Total Calls': 0,
+          'Avg Duration': 0,
+          'Customer Satisfaction': 0
+        }
+      ]
+    }
+
+    return NextResponse.json(placeholderData)
+  } catch (error) {
+    console.error('Error in analytics API:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch analytics data' },
+      { status: 500 }
+    )
+  }
 } 
