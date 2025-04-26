@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         id: verified.userId,
         email: verified.email,
         role: verified.role,
-        orgId: verified.orgId,
+        organizationId: verified.organizationId,
       },
     });
   } catch (error) {
