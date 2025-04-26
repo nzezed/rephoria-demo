@@ -15,11 +15,23 @@ import {
   ListItem,
 } from '@tremor/react'
 import { useIntegrationStore } from '@/services/integration-manager'
-import { CallData, CallTranscript, CallSentiment } from '../../../types/platform-integration'
 
-interface LiveCall extends CallData {
-  transcript?: CallTranscript
-  sentiment?: CallSentiment
+interface LiveCall {
+  id: string
+  agentId: string
+  duration: number
+  type: string
+  queueId: string
+  status: string
+  sentiment: number
+  transcript: {
+    segments: {
+      speaker: 'AGENT' | 'CUSTOMER'
+      text: string
+      timestamp: string
+      sentiment?: number
+    }[]
+  }
 }
 
 export default function LiveCallsPage() {
@@ -28,43 +40,31 @@ export default function LiveCallsPage() {
   const { getActiveCallPlatform } = useIntegrationStore()
 
   useEffect(() => {
-    // Subscribe to real-time updates
-    const platform = getActiveCallPlatform()
-    if (!platform) return
+    const fetchLiveCallData = async () => {
+      try {
+        const platform = getActiveCallPlatform()
+        if (!platform) {
+          setActiveCalls([])
+          setSelectedCall(null)
+          return
+        }
 
-    const unsubscribe = platform.subscribeToLiveUpdates({
-      onCallUpdate: (call) => {
-        setActiveCalls((prev) => {
-          const index = prev.findIndex((c) => c.id === call.id)
-          if (index === -1) {
-            return [...prev, call as LiveCall]
-          }
-          const updated = [...prev]
-          updated[index] = { ...updated[index], ...call }
-          return updated
-        })
-      },
-      onTranscriptUpdate: (callId, transcript) => {
-        setActiveCalls((prev) => {
-          const index = prev.findIndex((c) => c.id === callId)
-          if (index === -1) return prev
-          const updated = [...prev]
-          updated[index] = { ...updated[index], transcript }
-          return updated
-        })
-      },
-      onSentimentUpdate: (callId, sentiment) => {
-        setActiveCalls((prev) => {
-          const index = prev.findIndex((c) => c.id === callId)
-          if (index === -1) return prev
-          const updated = [...prev]
-          updated[index] = { ...updated[index], sentiment }
-          return updated
-        })
-      },
-    })
+        const response = await fetch('/api/live-calls')
+        if (!response.ok) {
+          throw new Error('Failed to fetch live call data')
+        }
 
-    return () => unsubscribe()
+        const data = await response.json()
+        setActiveCalls(data.activeCalls)
+      } catch (error) {
+        console.error('Error fetching live call data:', error)
+        setActiveCalls([])
+      }
+    }
+
+    fetchLiveCallData()
+    const interval = setInterval(fetchLiveCallData, 5000) // Refresh every 5 seconds
+    return () => clearInterval(interval)
   }, [getActiveCallPlatform])
 
   const getSentimentColor = (sentiment: number) => {
@@ -72,6 +72,17 @@ export default function LiveCallsPage() {
     if (sentiment > 0) return 'blue'
     if (sentiment > -0.5) return 'orange'
     return 'rose'
+  }
+
+  if (activeCalls.length === 0) {
+    return (
+      <main className="p-4 md:p-10 mx-auto max-w-7xl">
+        <Card>
+          <Title>No Active Calls</Title>
+          <Text>There are currently no active calls in the system.</Text>
+        </Card>
+      </main>
+    )
   }
 
   return (
@@ -90,17 +101,15 @@ export default function LiveCallsPage() {
                   <Flex justifyContent="start" className="space-x-4">
                     <div className="flex-1">
                       <Text>Agent: {call.agentId}</Text>
-                      <Text>Duration: {Math.floor(call.duration || 0)}s</Text>
+                      <Text>Duration: {Math.floor(call.duration)}s</Text>
                     </div>
                     <div className="flex-1">
                       <Text>Type: {call.type}</Text>
                       <Text>Queue: {call.queueId}</Text>
                     </div>
-                    {call.sentiment && (
-                      <Badge color={getSentimentColor(call.sentiment.overall)}>
-                        Sentiment: {(call.sentiment.overall * 100).toFixed(0)}%
-                      </Badge>
-                    )}
+                    <Badge color={getSentimentColor(call.sentiment)}>
+                      Sentiment: {(call.sentiment * 100).toFixed(0)}%
+                    </Badge>
                   </Flex>
                 </ListItem>
               ))}
@@ -117,7 +126,7 @@ export default function LiveCallsPage() {
                 {activeCalls.length > 0
                   ? (
                       (activeCalls.reduce(
-                        (acc, call) => acc + (call.sentiment?.overall || 0),
+                        (acc, call) => acc + call.sentiment,
                         0
                       ) /
                         activeCalls.length) *
@@ -131,7 +140,7 @@ export default function LiveCallsPage() {
               <Metric>
                 {activeCalls.length > 0
                   ? Math.floor(
-                      activeCalls.reduce((acc, call) => acc + (call.duration || 0), 0) /
+                      activeCalls.reduce((acc, call) => acc + call.duration, 0) /
                         activeCalls.length
                     ) + 's'
                   : 'N/A'}
@@ -146,7 +155,7 @@ export default function LiveCallsPage() {
           <Card>
             <Title>Live Transcript</Title>
             <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
-              {selectedCall.transcript?.segments.map((segment, index) => (
+              {selectedCall.transcript.segments.map((segment, index) => (
                 <div
                   key={index}
                   className={`p-2 rounded ${
@@ -167,33 +176,24 @@ export default function LiveCallsPage() {
 
           <Card>
             <Title>Call Analysis</Title>
-            {selectedCall.sentiment && (
-              <div className="mt-4 space-y-6">
-                <div>
-                  <Text>Overall Sentiment</Text>
-                  <ProgressBar
-                    value={(selectedCall.sentiment.overall + 1) * 50}
-                    color={getSentimentColor(selectedCall.sentiment.overall)}
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <Text>Key Phrases</Text>
-                  <List className="mt-2">
-                    {selectedCall.sentiment.keyPhrases.map((phrase, index) => (
-                      <ListItem key={index}>
-                        <Flex justifyContent="start" className="space-x-2">
-                          <Text>{phrase.text}</Text>
-                          <Badge color={getSentimentColor(phrase.sentiment)}>
-                            {(phrase.sentiment * 100).toFixed(0)}%
-                          </Badge>
-                        </Flex>
-                      </ListItem>
-                    ))}
-                  </List>
-                </div>
+            <div className="mt-4 space-y-6">
+              <div>
+                <Text>Overall Sentiment</Text>
+                <ProgressBar
+                  value={(selectedCall.sentiment + 1) * 50}
+                  color={getSentimentColor(selectedCall.sentiment)}
+                  className="mt-2"
+                />
               </div>
-            )}
+              <div>
+                <Text>Call Duration</Text>
+                <Metric>{Math.floor(selectedCall.duration)}s</Metric>
+              </div>
+              <div>
+                <Text>Status</Text>
+                <Badge>{selectedCall.status}</Badge>
+              </div>
+            </div>
           </Card>
         </Grid>
       )}
