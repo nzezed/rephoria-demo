@@ -1,10 +1,6 @@
-import { Metadata } from 'next';
-import { EmailVerificationForm } from '@/components/auth/EmailVerificationForm';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Verify Email',
-  description: 'Verify your email address',
-};
+import { EmailVerificationForm } from '@/components/auth/EmailVerificationForm';
 
 export default function VerifyEmailPage() {
   return (
