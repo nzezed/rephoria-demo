@@ -9,7 +9,7 @@ import {
   PlatformMetrics,
   HistoricalQuery,
   HistoricalData,
-} from './types'
+} from '@/types/platform-integration'
 
 export class IntegrationManager {
   private platforms: Map<string, BasePlatformIntegration> = new Map()
@@ -46,6 +46,9 @@ export class IntegrationManager {
       onQueueUpdate: (queue: QueueState) => this.handleQueueUpdate(config.id, queue),
       onMetricsUpdate: (metrics: PlatformMetrics) => this.handleMetricsUpdate(config.id, metrics),
       onError: (error: Error) => this.handleError(config.id, error),
+      onTranscriptUpdate: (callId: string, transcript) => this.eventHandlers.onTranscriptUpdate(callId, transcript),
+      onSentimentUpdate: (callId: string, sentiment) => this.eventHandlers.onSentimentUpdate(callId, sentiment),
+      onCustomerHistoryUpdate: (customerId: string, history) => this.eventHandlers.onCustomerHistoryUpdate(customerId, history)
     })
 
     await platform.initialize()
