@@ -1,50 +1,73 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { checkRateLimit } from './utils/error-handling'
+import { getTokenFromRequest, verifyAuth, isProtectedRoute, getErrorMessage } from '@/lib/auth/auth.utils'
 
 export async function middleware(request: NextRequest) {
-  // Only apply to API routes
-  if (!request.nextUrl.pathname.startsWith('/api')) {
+  const pathname = request.nextUrl.pathname
+
+  // Skip auth check for public routes
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/public') ||
+    pathname.startsWith('/api/auth') ||
+    pathname === '/'
+  ) {
     return NextResponse.next()
   }
 
-  // Get client IP
-  const ip = request.ip || 'unknown'
-
-  // Check rate limiting
-  if (!checkRateLimit(ip)) {
-    return new NextResponse(
-      JSON.stringify({
-        error: 'Too many requests',
-        code: 'RATE_LIMIT_EXCEEDED',
-      }),
-      {
-        status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+  // Check if route requires authentication
+  if (isProtectedRoute(pathname)) {
+    try {
+      // Get token from request
+      const token = getTokenFromRequest(request)
+      
+      if (!token) {
+        // Redirect to login if no token
+        return NextResponse.redirect(new URL('/auth/login', request.url))
       }
-    )
+
+      // Verify token and get user info
+      const verified = await verifyAuth(token)
+
+      // Add user info to request headers
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-user-id', verified.userId)
+      requestHeaders.set('x-user-role', verified.role)
+      requestHeaders.set('x-org-id', verified.orgId)
+
+      // Continue with added context
+      return NextResponse.next({
+        headers: requestHeaders,
+      })
+    } catch (error) {
+      console.error('Auth error:', getErrorMessage(error))
+      
+      // Handle API routes differently than page routes
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // Redirect to login for page routes
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
   }
 
-  // Add security headers
-  const response = NextResponse.next()
-  
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
-  response.headers.set(
-    'Strict-Transport-Security',
-    'max-age=31536000; includeSubDomains'
-  )
-  response.headers.set(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
-  )
-
-  return response
+  return NextResponse.next()
 }
 
+// Configure which routes to run middleware on
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    /*
+     * Match all request paths except:
+     * 1. _next/static (static files)
+     * 2. _next/image (image optimization files)
+     * 3. favicon.ico (favicon file)
+     * 4. public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+  ],
 } 
