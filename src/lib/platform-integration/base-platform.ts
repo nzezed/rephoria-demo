@@ -8,7 +8,8 @@ import {
   PlatformMetrics,
   HistoricalQuery,
   HistoricalData,
-} from './types'
+  PlatformCapabilities
+} from '@/types/platform-integration'
 
 export abstract class BasePlatformIntegration {
   protected config: PlatformConfig
@@ -30,6 +31,9 @@ export abstract class BasePlatformIntegration {
           callRecording: false,
           customEvents: false,
           webhooks: false,
+          liveTranscription: false,
+          sentimentAnalysis: false,
+          aiAssistance: false
         },
         limits: {},
       },
@@ -43,6 +47,10 @@ export abstract class BasePlatformIntegration {
         serviceLevel: 0,
         abandonRate: 0,
         callsInLastHour: 0,
+        sentiment: {
+          average: 0,
+          trend: 'STABLE'
+        },
         metadata: {},
       },
     }
