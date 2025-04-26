@@ -1,11 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, User, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AuthUser, LoginCredentials, RegisterData, JWTPayload, Role, AuthResponse } from './types';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, verifyPassword, generateVerificationToken, generatePasswordResetToken, generateJWT } from './utils';
 import { EmailService } from '@/lib/email/email.service';
-import { User, Prisma } from '@prisma/client';
 
 const prismaClient = new PrismaClient();
 
@@ -96,7 +95,7 @@ export class AuthService {
   }
 
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Find user
+    // Find user with all fields
     const user = await prismaClient.user.findUnique({
       where: { email: credentials.email },
     });
@@ -128,8 +127,20 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name || undefined,
+      role: user.role as Role,
+      organizationId: user.organizationId,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt || undefined,
+    };
+
     return {
-      user: this.sanitizeUser(user),
+      user: authUser,
       token,
     };
   }
@@ -141,8 +152,8 @@ export class AuthService {
       // Check if session exists and is valid
       const session = await prismaClient.session.findFirst({
         where: {
-          token,
-          expiresAt: { gt: new Date() },
+          sessionToken: token,
+          expires: { gt: new Date() },
         },
       });
 
@@ -158,16 +169,16 @@ export class AuthService {
 
   static async logout(token: string): Promise<void> {
     await prismaClient.session.deleteMany({
-      where: { token },
+      where: { sessionToken: token },
     });
   }
 
-  private static generateToken(user: any): string {
+  private static generateToken(user: User): string {
     const payload: JWTPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
-      orgId: user.orgId,
+      role: user.role as Role,
+      organizationId: user.organizationId,
     };
 
     return jwt.sign(payload, this.JWT_SECRET, {
@@ -182,8 +193,8 @@ export class AuthService {
     return prismaClient.session.create({
       data: {
         userId,
-        token,
-        expiresAt,
+        sessionToken: token,
+        expires: expiresAt,
       },
     });
   }
