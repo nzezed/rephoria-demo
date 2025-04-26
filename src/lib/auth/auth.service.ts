@@ -295,6 +295,20 @@ export class AuthService {
 
     const hashedPassword = await hashPassword(newPassword);
 
+    // Invalidate all sessions for the user
+    await prisma.session.deleteMany({
+      where: { userId: user.id },
+    });
+
+    // Log the password reset event
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'PASSWORD_RESET',
+        details: 'User reset their password via reset link.'
+      }
+    });
+
     return prisma.user.update({
       where: { id: user.id },
       data: {
