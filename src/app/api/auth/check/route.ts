@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth/auth.utils';
 import { AuthService } from '@/lib/auth/auth.service';
 import type { NextRequest } from 'next/server';
+import type { AuthUser } from '@/lib/auth/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,14 +18,16 @@ export async function GET(request: NextRequest) {
     // Verify token and get user info
     const verified = await AuthService.validateToken(token);
 
+    const user: Partial<AuthUser> = {
+      id: verified.userId,
+      email: verified.email,
+      role: verified.role,
+      organizationId: verified.organizationId,
+    };
+
     return NextResponse.json({
       authenticated: true,
-      user: {
-        id: verified.userId,
-        email: verified.email,
-        role: verified.role,
-        organizationId: verified.organizationId,
-      },
+      user,
     });
   } catch (error) {
     return NextResponse.json(
