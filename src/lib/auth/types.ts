@@ -1,4 +1,8 @@
-export type Role = 'admin' | 'user';
+export enum Role {
+  ADMIN = 'admin',
+  USER = 'user',
+  MANAGER = 'manager'
+}
 
 export interface AuthUser {
   id: string;
