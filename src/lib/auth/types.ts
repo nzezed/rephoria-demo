@@ -3,7 +3,7 @@ export interface AuthUser {
   email: string;
   name?: string;
   role: Role;
-  orgId: string;
+  organizationId: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -29,7 +29,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: Role;
-  orgId: string;
+  organizationId: string;
 }
 
 export enum Role {
