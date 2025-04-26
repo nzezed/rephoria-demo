@@ -1,3 +1,4 @@
+import NextAuth from 'next-auth';
 import { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -68,4 +69,6 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export { authOptions as GET, authOptions as POST };
+const handler = NextAuth(authOptions);
+export const GET = handler;
+export const POST = handler;
