@@ -1,21 +1,22 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 
 interface TokenPayload {
   userId: string;
   [key: string]: any;
 }
 
-export function generateToken(payload: TokenPayload, expiresIn: string = '1h'): string {
-  const secret = process.env.JWT_SECRET;
+export function generateToken(payload: TokenPayload, expiresIn: SignOptions['expiresIn'] = '1h'): string {
+  const secret = process.env.JWT_SECRET as Secret;
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is not set');
   }
   
-  return jwt.sign(payload, secret, { expiresIn });
+  const options: SignOptions = { expiresIn };
+  return jwt.sign(payload, secret, options);
 }
 
 export function verifyToken(token: string): TokenPayload {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET as Secret;
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is not set');
   }
