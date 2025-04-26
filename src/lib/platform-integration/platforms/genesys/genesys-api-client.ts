@@ -1,5 +1,5 @@
-import { platformClient, ApiClient } from 'purecloud-platform-client-v2'
-import { PlatformConfig, HistoricalQuery } from '../../types'
+import * as PureCloud from 'purecloud-platform-client-v2'
+import { PlatformConfig, HistoricalQuery } from '@/types/platform-integration'
 
 interface QueueMetrics {
   activeCalls: number
@@ -17,14 +17,40 @@ interface AgentMetrics {
   agentStates: Record<string, number>
 }
 
+interface QueueObservationMetrics {
+  oInteracting: number
+  oTotalHandleTime: number
+  oTotalCalls: number
+  oAbandon: number
+  oWaiting: number
+  oServiceLevel: number
+}
+
+interface QueueObservationData {
+  group: {
+    queueId: string
+    mediaType: string
+  }
+  data: QueueObservationMetrics[]
+}
+
+interface Conversation {
+  conversationStart: string
+  conversationEnd?: string
+  participants: Array<{
+    disconnectType?: string
+  }>
+  [key: string]: any
+}
+
 export class GenesysApiClient {
-  private client: ApiClient
+  private client: any
   private config: PlatformConfig
   private authToken?: string
 
   constructor(config: PlatformConfig) {
     this.config = config
-    this.client = platformClient.ApiClient.instance
+    this.client = PureCloud.ApiClient.instance
   }
 
   async initialize(environment: string, clientId: string, clientSecret: string): Promise<void> {
@@ -41,11 +67,11 @@ export class GenesysApiClient {
   }
 
   async fetchQueueMetrics(): Promise<QueueMetrics> {
-    const analyticsApi = new platformClient.AnalyticsApi()
-    const routingApi = new platformClient.RoutingApi()
+    const analyticsApi = new PureCloud.AnalyticsApi()
+    const routingApi = new PureCloud.RoutingApi()
 
     // Fetch queue observations
-    const queueObservations = await analyticsApi.getAnalyticsQueuesObservations({
+    const queueObservations = await analyticsApi.postAnalyticsQueuesObservationsQuery({
       filter: {
         type: 'or',
         predicates: [
@@ -55,10 +81,12 @@ export class GenesysApiClient {
           },
         ],
       },
+      metrics: ['oInteracting', 'oTotalHandleTime', 'oTotalCalls', 'oAbandon', 'oWaiting', 'oServiceLevel']
     })
 
     // Fetch queue details
     const queues = await routingApi.getRoutingQueues({ pageSize: 100 })
+    const queueEntities = queues?.entities || []
 
     let activeCalls = 0
     let totalHandleTime = 0
@@ -66,25 +94,37 @@ export class GenesysApiClient {
     let abandonedCalls = 0
     const queueDetails: Record<string, any> = {}
 
-    queueObservations.data.forEach((observation) => {
-      activeCalls += observation.metrics.oInteracting || 0
-      totalHandleTime += observation.metrics.oTotalHandleTime || 0
-      totalCalls += observation.metrics.oTotalCalls || 0
-      abandonedCalls += observation.metrics.oAbandon || 0
+    const results = queueObservations?.results || []
+    results.forEach((result: any) => {
+      const metrics = result.data?.[0] || {}
+      const queueId = result.group?.queueId
 
-      queueDetails[observation.queue.id] = {
-        name: observation.queue.name,
-        activeCalls: observation.metrics.oInteracting || 0,
-        waitingCalls: observation.metrics.oWaiting || 0,
-        serviceLevel: observation.metrics.oServiceLevel || 0,
+      if (queueId) {
+        activeCalls += Number(metrics.oInteracting || 0)
+        totalHandleTime += Number(metrics.oTotalHandleTime || 0)
+        totalCalls += Number(metrics.oTotalCalls || 0)
+        abandonedCalls += Number(metrics.oAbandon || 0)
+
+        const queue = queueEntities.find(q => q.id === queueId)
+        queueDetails[queueId] = {
+          name: queue?.name || 'Unknown Queue',
+          activeCalls: Number(metrics.oInteracting || 0),
+          waitingCalls: Number(metrics.oWaiting || 0),
+          serviceLevel: Number(metrics.oServiceLevel || 0),
+        }
       }
     })
 
+    const totalServiceLevel = results.reduce((acc: number, result: any) => {
+      const metrics = result.data?.[0] || {}
+      return acc + Number(metrics.oServiceLevel || 0)
+    }, 0)
+
     return {
       activeCalls,
-      totalQueues: queues.entities.length,
+      totalQueues: queueEntities.length,
       averageHandleTime: totalCalls > 0 ? totalHandleTime / totalCalls : 0,
-      serviceLevel: queueObservations.data.reduce((acc, q) => acc + (q.metrics.oServiceLevel || 0), 0) / queueObservations.data.length,
+      serviceLevel: results.length > 0 ? totalServiceLevel / results.length : 0,
       abandonRate: totalCalls > 0 ? (abandonedCalls / totalCalls) * 100 : 0,
       callsInLastHour: totalCalls,
       queueDetails,
@@ -92,26 +132,29 @@ export class GenesysApiClient {
   }
 
   async fetchAgentMetrics(): Promise<AgentMetrics> {
-    const usersApi = new platformClient.UsersApi()
-    const presenceApi = new platformClient.PresenceApi()
+    const usersApi = new PureCloud.UsersApi()
+    const presenceApi = new PureCloud.PresenceApi()
 
     // Fetch all users
     const users = await usersApi.getUsers({ pageSize: 100 })
+    const userEntities = users?.entities || []
 
     // Fetch presence for all users
     const presenceStates = new Map<string, number>()
-    for (const user of users.entities) {
+    for (const user of userEntities) {
       try {
-        const presence = await presenceApi.getUserPresence(user.id, 'PURECLOUD')
-        const state = presence.presenceDefinition.systemPresence
-        presenceStates.set(state, (presenceStates.get(state) || 0) + 1)
+        if (user.id) {
+          const presence = await presenceApi.getUserPresence(user.id, 'PURECLOUD')
+          const state = presence?.presenceDefinition?.systemPresence || 'UNKNOWN'
+          presenceStates.set(state, (presenceStates.get(state) || 0) + 1)
+        }
       } catch (error) {
         console.error(`Failed to fetch presence for user ${user.id}:`, error)
       }
     }
 
     return {
-      totalAgents: users.entities.length,
+      totalAgents: userEntities.length,
       availableAgents: presenceStates.get('AVAILABLE') || 0,
       agentStates: Object.fromEntries(presenceStates),
     }
@@ -121,7 +164,7 @@ export class GenesysApiClient {
     metrics: Record<string, number>
     segments: Record<string, Record<string, number>>
   }> {
-    const analyticsApi = new platformClient.AnalyticsApi()
+    const analyticsApi = new PureCloud.AnalyticsApi()
 
     const response = await analyticsApi.postAnalyticsConversationsDetailsQuery({
       interval: `${query.startDate.toISOString()}/${query.endDate.toISOString()}`,
@@ -142,35 +185,38 @@ export class GenesysApiClient {
     }
 
     const segments: Record<string, Record<string, number>> = {}
+    const conversations = response?.conversations || []
 
-    response.conversations.forEach((conversation) => {
-      metrics.totalCalls++
-      metrics.totalDuration += conversation.conversationEnd
-        ? new Date(conversation.conversationEnd).getTime() - new Date(conversation.conversationStart).getTime()
-        : 0
+    conversations.forEach((conversation: any) => {
+      if (conversation.conversationStart) {
+        metrics.totalCalls++
+        metrics.totalDuration += conversation.conversationEnd
+          ? new Date(conversation.conversationEnd).getTime() - new Date(conversation.conversationStart).getTime()
+          : 0
 
-      if (conversation.conversationEnd) {
-        const duration = new Date(conversation.conversationEnd).getTime() - new Date(conversation.conversationStart).getTime()
-        if (duration < 30000) { // Less than 30 seconds
-          metrics.shortCalls++
-        }
-      }
-
-      if (conversation.participants.some(p => p.disconnectType === 'ABANDON')) {
-        metrics.abandonedCalls++
-      }
-
-      // Group by requested segments
-      if (query.groupBy) {
-        query.groupBy.forEach((groupKey) => {
-          const value = (conversation as any)[groupKey]
-          if (value) {
-            if (!segments[groupKey]) {
-              segments[groupKey] = {}
-            }
-            segments[groupKey][value] = (segments[groupKey][value] || 0) + 1
+        if (conversation.conversationEnd) {
+          const duration = new Date(conversation.conversationEnd).getTime() - new Date(conversation.conversationStart).getTime()
+          if (duration < 30000) { // Less than 30 seconds
+            metrics.shortCalls++
           }
-        })
+        }
+
+        if (conversation.participants?.some((p: any) => p.disconnectType === 'ABANDON')) {
+          metrics.abandonedCalls++
+        }
+
+        // Group by requested segments
+        if (query.groupBy) {
+          query.groupBy.forEach((groupKey: string) => {
+            const value = conversation[groupKey]
+            if (value) {
+              if (!segments[groupKey]) {
+                segments[groupKey] = {}
+              }
+              segments[groupKey][value] = (segments[groupKey][value] || 0) + 1
+            }
+          })
+        }
       }
     })
 
