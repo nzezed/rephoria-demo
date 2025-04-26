@@ -2,15 +2,39 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AuthUser, LoginCredentials, RegisterData, JWTPayload, Role, AuthResponse } from './types';
+import { prisma } from '@/lib/prisma';
+import { hashPassword, verifyPassword, generateVerificationToken, generatePasswordResetToken, generateJWT } from './utils';
+import { EmailService } from '@/lib/email/email.service';
+import { User, Prisma } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prismaClient = new PrismaClient();
+
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  name?: string;
+  organizationId: string;
+}
+
+export interface AuthResult {
+  user: User;
+  token: string;
+}
+
+export interface RegisterInput {
+  email: string;
+  password: string;
+  name?: string;
+  organizationName: string;
+  subdomain: string;
+}
 
 export class AuthService {
   private static readonly JWT_SECRET = process.env.JWT_SECRET!;
   private static readonly JWT_EXPIRES_IN = '24h';
   private static readonly SALT_ROUNDS = 10;
 
-  static async register(data: RegisterData): Promise<AuthResponse> {
+  static async register(data: RegisterInput): Promise<AuthResult> {
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
@@ -20,43 +44,60 @@ export class AuthService {
       throw new Error('User already exists');
     }
 
+    // Check if subdomain is available
+    const existingOrg = await prisma.organization.findUnique({
+      where: { subdomain: data.subdomain },
+    });
+
+    if (existingOrg) {
+      throw new Error('Subdomain is already taken');
+    }
+
     // Create organization first
     const organization = await prisma.organization.create({
       data: {
         name: data.organizationName,
-        plan: 'FREE',
+        subdomain: data.subdomain,
+        plan: 'free',
       },
     });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, this.SALT_ROUNDS);
+    const hashedPassword = await hashPassword(data.password);
+    const verificationToken = generateVerificationToken();
 
     // Create user
     const user = await prisma.user.create({
       data: {
         email: data.email,
-        password: hashedPassword,
+        hashedPassword,
         name: data.name,
-        orgId: organization.id,
-        role: Role.ADMIN, // First user of org is admin
+        organization: {
+          connect: { id: organization.id }
+        },
+        verificationToken,
+        role: 'admin', // First user of org is admin
       },
     });
 
-    // Generate token
-    const token = this.generateToken(user);
+    await EmailService.sendVerificationEmail(
+      user.email,
+      verificationToken,
+      user.name || undefined
+    );
 
-    // Create session
-    await this.createSession(user.id, token);
+    // Generate JWT token
+    const token = generateJWT({
+      userId: user.id,
+      organizationId: organization.id,
+      role: user.role,
+    });
 
-    return {
-      user: this.sanitizeUser(user),
-      token,
-    };
+    return { user, token };
   }
 
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // Find user
-    const user = await prisma.user.findUnique({
+    const user = await prismaClient.user.findUnique({
       where: { email: credentials.email },
     });
 
@@ -82,7 +123,7 @@ export class AuthService {
     await this.createSession(user.id, token);
 
     // Update last login
-    await prisma.user.update({
+    await prismaClient.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
@@ -98,7 +139,7 @@ export class AuthService {
       const decoded = jwt.verify(token, this.JWT_SECRET) as JWTPayload;
       
       // Check if session exists and is valid
-      const session = await prisma.session.findFirst({
+      const session = await prismaClient.session.findFirst({
         where: {
           token,
           expiresAt: { gt: new Date() },
@@ -116,7 +157,7 @@ export class AuthService {
   }
 
   static async logout(token: string): Promise<void> {
-    await prisma.session.deleteMany({
+    await prismaClient.session.deleteMany({
       where: { token },
     });
   }
@@ -138,7 +179,7 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    return prisma.session.create({
+    return prismaClient.session.create({
       data: {
         userId,
         token,
@@ -150,5 +191,168 @@ export class AuthService {
   private static sanitizeUser(user: any): AuthUser {
     const { password, ...sanitizedUser } = user;
     return sanitizedUser;
+  }
+
+  static async createUser({
+    email,
+    password,
+    name,
+    organizationId,
+  }: CreateUserInput): Promise<User> {
+    const hashedPassword = await hashPassword(password);
+    const verificationToken = generateVerificationToken();
+
+    const userData: Prisma.UserCreateInput = {
+      email,
+      hashedPassword,
+      name,
+      organization: {
+        connect: { id: organizationId }
+      },
+      verificationToken,
+      role: 'user',
+    };
+
+    const user = await prisma.user.create({
+      data: userData,
+    });
+
+    await EmailService.sendVerificationEmail(email, verificationToken, name);
+
+    return user;
+  }
+
+  static async verifyEmail(token: string): Promise<User> {
+    const user = await prisma.user.findFirst({
+      where: { verificationToken: token },
+    });
+
+    if (!user) {
+      throw new Error('Invalid verification token');
+    }
+
+    return prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: new Date(),
+        verificationToken: null,
+      },
+    });
+  }
+
+  static async initiatePasswordReset(email: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Return silently for security
+      return;
+    }
+
+    const resetToken = generatePasswordResetToken();
+    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken,
+        resetTokenExpiry,
+      },
+    });
+
+    await EmailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      user.name || undefined
+    );
+  }
+
+  static async resetPassword(token: string, newPassword: string): Promise<User> {
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    return prisma.user.update({
+      where: { id: user.id },
+      data: {
+        hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+  }
+
+  static async validateCredentials(email: string, password: string): Promise<AuthResult> {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        organization: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+
+    const isValid = await verifyPassword(password, user.hashedPassword);
+    if (!isValid) {
+      throw new Error('Invalid credentials');
+    }
+
+    if (!user.emailVerified) {
+      throw new Error('Email not verified');
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+      },
+    });
+
+    // Generate JWT token
+    const token = generateJWT({
+      userId: user.id,
+      organizationId: user.organizationId,
+      role: user.role,
+    });
+
+    return { user, token };
+  }
+
+  static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<User> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const isValid = await verifyPassword(currentPassword, user.hashedPassword);
+    if (!isValid) {
+      throw new Error('Current password is incorrect');
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        hashedPassword,
+      },
+    });
   }
 } 

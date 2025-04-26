@@ -2,22 +2,20 @@ import { NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth/auth.service';
 import { z } from 'zod';
 
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().optional(),
-  organizationName: z.string().min(2),
-  subdomain: z.string().min(3).regex(/^[a-z0-9-]+$/),
+const verifyEmailSchema = z.object({
+  token: z.string(),
 });
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const data = registerSchema.parse(body);
+    const data = verifyEmailSchema.parse(body);
 
-    const result = await AuthService.register(data);
+    await AuthService.verifyEmail(data.token);
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json({
+      message: 'Email verified successfully',
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -33,9 +31,9 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error('Registration error:', error);
+    console.error('Email verification error:', error);
     return NextResponse.json(
-      { error: 'Failed to register user' },
+      { error: 'Failed to verify email' },
       { status: 500 }
     );
   }

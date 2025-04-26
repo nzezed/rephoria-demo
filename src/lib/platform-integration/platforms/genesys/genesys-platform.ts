@@ -7,21 +7,21 @@ import {
   HistoricalData,
   PlatformCapabilities,
 } from '@/types/platform-integration'
-import { BasePlatformIntegration } from '../../base-platform'
+import { BasePlatformIntegration } from '@/lib/platform-integration/base-platform'
 import { GenesysWebSocket } from './genesys-websocket'
 import { GenesysApiClient } from './genesys-api-client'
 import { GenesysEventProcessor } from './genesys-event-processor'
 
 export class GenesysPlatform extends BasePlatformIntegration {
-  private apiClient: GenesysApiClient
-  private webSocket: GenesysWebSocket
+  private apiClient: any
+  private webSocket: any
   private eventProcessor: GenesysEventProcessor
   private isInitialized: boolean = false
 
   constructor(config: PlatformConfig, events: PlatformEvents) {
     super(config, events)
-    this.apiClient = new GenesysApiClient(config)
-    this.webSocket = new GenesysWebSocket(this.handleWebSocketMessage.bind(this))
+    this.apiClient = PureCloud.ApiClient.instance
+    this.webSocket = new PureCloud.WebSocket()
     this.eventProcessor = new GenesysEventProcessor(this.events)
 
     // Set Genesys-specific capabilities

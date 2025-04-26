@@ -1,35 +1,67 @@
 import { NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth/auth.service';
-import { getErrorMessage } from '@/lib/auth/auth.utils';
+import { z } from 'zod';
 import { cookies } from 'next/headers';
+import { generateToken } from '@/lib/token';
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
+  csrfToken: z.string(),
+});
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = cookies();
+    const storedCsrfToken = cookieStore.get('csrf_token')?.value;
+    
     const body = await request.json();
-    const result = await AuthService.login(body);
+    const data = loginSchema.parse(body);
 
-    // Set auth token in HTTP-only cookie
-    cookies().set('auth_token', result.token, {
+    // Validate CSRF token
+    if (!storedCsrfToken || storedCsrfToken !== data.csrfToken) {
+      return NextResponse.json(
+        { error: 'Invalid CSRF token' },
+        { status: 403 }
+      );
+    }
+
+    const result = await AuthService.validateCredentials(
+      data.email,
+      data.password
+    );
+
+    // Generate new CSRF token for next request
+    const newCsrfToken = generateToken();
+    const response = NextResponse.json(result);
+    
+    response.cookies.set('csrf_token', newCsrfToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 hours
+      sameSite: 'strict',
       path: '/',
     });
 
-    return NextResponse.json({
-      user: result.user,
-      message: 'Login successful',
-    });
+    return response;
   } catch (error) {
-    console.error('Login error:', getErrorMessage(error));
-    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401 }
+      );
+    }
+
+    console.error('Login error:', error);
     return NextResponse.json(
-      {
-        error: getErrorMessage(error),
-        code: 'AUTH_ERROR',
-      },
-      { status: 401 }
+      { error: 'Failed to authenticate' },
+      { status: 500 }
     );
   }
 } 
