@@ -13,6 +13,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  USER
+  MANAGER
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -33,7 +39,7 @@ model User {
   emailVerified    DateTime?
   hashedPassword   String
   image            String?
-  role             String    @default("user")
+  role             Role      @default(USER)
   organization     Organization @relation(fields: [organizationId], references: [id])
   organizationId   String
   verificationToken String?   @unique
