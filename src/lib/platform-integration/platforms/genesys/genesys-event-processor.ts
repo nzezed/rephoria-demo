@@ -3,7 +3,7 @@ import {
   CallData,
   AgentState,
   QueueState,
-} from '../../types'
+} from '@/types/platform-integration'
 
 interface GenesysEvent {
   topicName: string
