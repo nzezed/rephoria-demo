@@ -1,268 +1,202 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react'
 import {
   Card,
   Title,
   Text,
-  TabGroup,
-  TabList,
-  Tab,
-  TabPanels,
-  TabPanel,
   Grid,
+  Col,
+  Metric,
+  ProgressBar,
   Flex,
   Badge,
-  Button,
   List,
   ListItem,
-} from '@tremor/react';
-import {
-  PhoneIcon,
-  ChatBubbleLeftRightIcon,
-  ClockIcon,
-  UserIcon,
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
-import { steamConnectService } from '@/services/steam-connect';
-import { STEAM_CONNECT_CONFIG } from '@/config/steam-connect';
-import type { SteamConnectSession, SteamConnectAgent, SteamConnectQueue } from '@/config/steam-connect';
+} from '@tremor/react'
+import { useIntegrationStore } from '@/services/integration-manager'
+import { CallData, CallTranscript, CallSentiment } from '@/lib/platform-integration/types'
+
+interface LiveCall extends CallData {
+  transcript?: CallTranscript
+  sentiment?: CallSentiment
+}
 
 export default function LiveCallsPage() {
-  const [activeSessions, setActiveSessions] = useState<SteamConnectSession[]>([]);
-  const [availableAgents, setAvailableAgents] = useState<SteamConnectAgent[]>([]);
-  const [queueStatus, setQueueStatus] = useState<SteamConnectQueue | null>(null);
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [activeCalls, setActiveCalls] = useState<LiveCall[]>([])
+  const [selectedCall, setSelectedCall] = useState<LiveCall | null>(null)
+  const { getActiveCallPlatform } = useIntegrationStore()
 
   useEffect(() => {
-    if (!STEAM_CONNECT_CONFIG.apiKey) {
-      setError('Steam Connect is not configured. Please add your API key to continue.');
-      return;
-    }
+    // Subscribe to real-time updates
+    const platform = getActiveCallPlatform()
+    if (!platform) return
 
-    // Initial data load
-    loadData();
+    const unsubscribe = platform.subscribeToLiveUpdates({
+      onCallUpdate: (call) => {
+        setActiveCalls((prev) => {
+          const index = prev.findIndex((c) => c.id === call.id)
+          if (index === -1) {
+            return [...prev, call as LiveCall]
+          }
+          const updated = [...prev]
+          updated[index] = { ...updated[index], ...call }
+          return updated
+        })
+      },
+      onTranscriptUpdate: (callId, transcript) => {
+        setActiveCalls((prev) => {
+          const index = prev.findIndex((c) => c.id === callId)
+          if (index === -1) return prev
+          const updated = [...prev]
+          updated[index] = { ...updated[index], transcript }
+          return updated
+        })
+      },
+      onSentimentUpdate: (callId, sentiment) => {
+        setActiveCalls((prev) => {
+          const index = prev.findIndex((c) => c.id === callId)
+          if (index === -1) return prev
+          const updated = [...prev]
+          updated[index] = { ...updated[index], sentiment }
+          return updated
+        })
+      },
+    })
 
-    try {
-      // Subscribe to real-time updates
-      const ws = steamConnectService.subscribeToUpdates((update) => {
-        if (update.type === 'session_update') {
-          setActiveSessions(prev => 
-            prev.map(session => 
-              session.sessionId === update.sessionId 
-                ? { ...session, ...update.data }
-                : session
-            )
-          );
-        } else if (update.type === 'agent_update') {
-          setAvailableAgents(prev =>
-            prev.map(agent =>
-              agent.id === update.agentId
-                ? { ...agent, ...update.data }
-                : agent
-            )
-          );
-        } else if (update.type === 'queue_update') {
-          setQueueStatus(prev => ({ ...prev, ...update.data }));
-        }
-      });
+    return () => unsubscribe()
+  }, [getActiveCallPlatform])
 
-      return () => {
-        ws.close();
-      };
-    } catch (error) {
-      console.error('Error setting up WebSocket:', error);
-      setError('Failed to connect to Steam Connect. Please check your configuration.');
-    }
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const [agents, queueData] = await Promise.all([
-        steamConnectService.getAvailableAgents(),
-        steamConnectService.getQueueStatus('general'),
-      ]);
-
-      setAvailableAgents(agents);
-      setQueueStatus(queueData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setError('Failed to load data from Steam Connect. Please check your configuration.');
-    }
-  };
-
-  const handleTransferSession = async (sessionId: string, targetAgentId: string) => {
-    try {
-      await steamConnectService.transferSession(sessionId, targetAgentId);
-      // Update will come through WebSocket
-    } catch (error) {
-      console.error('Error transferring session:', error);
-    }
-  };
-
-  const getChannelIcon = (channel: SteamConnectSession['channel']) => {
-    switch (channel) {
-      case 'voice':
-        return <PhoneIcon className="h-5 w-5" />;
-      case 'chat':
-        return <ChatBubbleLeftRightIcon className="h-5 w-5" />;
-      default:
-        return <ChatBubbleLeftRightIcon className="h-5 w-5" />;
-    }
-  };
-
-  if (error) {
-    return (
-      <main className="p-4 md:p-10 mx-auto max-w-7xl">
-        <Card>
-          <Flex alignItems="center" justifyContent="center" className="h-64">
-            <div className="text-center space-y-4">
-              <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500 mx-auto" />
-              <Title>Configuration Required</Title>
-              <Text>{error}</Text>
-              <Button
-                size="sm"
-                onClick={() => window.location.href = '/dashboard/integrations'}
-              >
-                Configure Steam Connect
-              </Button>
-            </div>
-          </Flex>
-        </Card>
-      </main>
-    );
+  const getSentimentColor = (sentiment: number) => {
+    if (sentiment > 0.5) return 'emerald'
+    if (sentiment > 0) return 'blue'
+    if (sentiment > -0.5) return 'orange'
+    return 'rose'
   }
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">
-      <Grid numItems={1} numItemsSm={2} numItemsLg={3} className="gap-6 mb-6">
+      <Grid numItemsLg={3} className="gap-6 mb-6">
+        <Col numColSpanLg={2}>
+          <Card>
+            <Title>Active Calls ({activeCalls.length})</Title>
+            <List className="mt-4">
+              {activeCalls.map((call) => (
+                <ListItem
+                  key={call.id}
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => setSelectedCall(call)}
+                >
+                  <Flex justifyContent="start" className="space-x-4">
+                    <div className="flex-1">
+                      <Text>Agent: {call.agentId}</Text>
+                      <Text>Duration: {Math.floor(call.duration || 0)}s</Text>
+                    </div>
+                    <div className="flex-1">
+                      <Text>Type: {call.type}</Text>
+                      <Text>Queue: {call.queueId}</Text>
+                    </div>
+                    {call.sentiment && (
+                      <Badge color={getSentimentColor(call.sentiment.overall)}>
+                        Sentiment: {(call.sentiment.overall * 100).toFixed(0)}%
+                      </Badge>
+                    )}
+                  </Flex>
+                </ListItem>
+              ))}
+            </List>
+          </Card>
+        </Col>
+
         <Card>
-          <Flex alignItems="center">
+          <Title>Call Statistics</Title>
+          <div className="mt-4 space-y-6">
             <div>
-              <Text>Active Sessions</Text>
-              <Title>{activeSessions.length}</Title>
+              <Text>Average Sentiment</Text>
+              <Metric>
+                {activeCalls.length > 0
+                  ? (
+                      (activeCalls.reduce(
+                        (acc, call) => acc + (call.sentiment?.overall || 0),
+                        0
+                      ) /
+                        activeCalls.length) *
+                      100
+                    ).toFixed(0) + '%'
+                  : 'N/A'}
+              </Metric>
             </div>
-            <Badge color="blue">{queueStatus?.waitingCustomers || 0} in queue</Badge>
-          </Flex>
-        </Card>
-        <Card>
-          <Flex alignItems="center">
             <div>
-              <Text>Available Agents</Text>
-              <Title>{availableAgents.length}</Title>
+              <Text>Average Duration</Text>
+              <Metric>
+                {activeCalls.length > 0
+                  ? Math.floor(
+                      activeCalls.reduce((acc, call) => acc + (call.duration || 0), 0) /
+                        activeCalls.length
+                    ) + 's'
+                  : 'N/A'}
+              </Metric>
             </div>
-            <Badge color="green">Online</Badge>
-          </Flex>
-        </Card>
-        <Card>
-          <Flex alignItems="center">
-            <div>
-              <Text>Average Wait Time</Text>
-              <Title>{queueStatus?.averageWaitTime || 0}m</Title>
-            </div>
-            <ClockIcon className="h-5 w-5 text-gray-500" />
-          </Flex>
+          </div>
         </Card>
       </Grid>
 
-      <TabGroup>
-        <TabList>
-          <Tab>Active Sessions</Tab>
-          <Tab>Available Agents</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <Grid numItems={1} className="gap-6 mt-6">
-              {activeSessions.map((session) => (
-                <Card key={session.sessionId}>
-                  <Flex>
-                    <Flex alignItems="center" className="space-x-4">
-                      {getChannelIcon(session.channel)}
-                      <div>
-                        <Text>Session {session.sessionId}</Text>
-                        <Text className="text-gray-500">
-                          {session.customerId} • {session.channel}
-                        </Text>
-                      </div>
-                    </Flex>
-                    <Flex className="space-x-2">
-                      <Badge color="gray">
-                        {Math.floor((Date.now() - new Date(session.startTime).getTime()) / 60000)}m
-                      </Badge>
-                      {session.agentId && (
-                        <Badge color="blue">
-                          Agent: {availableAgents.find(a => a.id === session.agentId)?.name}
-                        </Badge>
-                      )}
-                    </Flex>
-                  </Flex>
-                  {selectedSession === session.sessionId && (
-                    <div className="mt-4">
-                      <Text className="font-medium mb-2">Transfer to:</Text>
-                      <List>
-                        {availableAgents.map((agent) => (
-                          <ListItem key={agent.id}>
-                            <Flex justifyContent="between" alignItems="center">
-                              <Flex alignItems="center" className="space-x-2">
-                                <UserIcon className="h-5 w-5" />
-                                <Text>{agent.name}</Text>
-                              </Flex>
-                              <Button
-                                size="xs"
-                                variant="secondary"
-                                onClick={() => handleTransferSession(session.sessionId, agent.id)}
-                              >
-                                Transfer
-                              </Button>
-                            </Flex>
-                          </ListItem>
-                        ))}
-                      </List>
-                    </div>
+      {selectedCall && (
+        <Grid numItemsLg={2} className="gap-6">
+          <Card>
+            <Title>Live Transcript</Title>
+            <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
+              {selectedCall.transcript?.segments.map((segment, index) => (
+                <div
+                  key={index}
+                  className={`p-2 rounded ${
+                    segment.speaker === 'AGENT' ? 'bg-blue-50' : 'bg-gray-50'
+                  }`}
+                >
+                  <Text className="font-semibold">{segment.speaker}</Text>
+                  <Text>{segment.text}</Text>
+                  {segment.sentiment !== undefined && (
+                    <Badge color={getSentimentColor(segment.sentiment)} className="mt-1">
+                      Sentiment: {(segment.sentiment * 100).toFixed(0)}%
+                    </Badge>
                   )}
-                  <Button
-                    size="xs"
-                    variant="light"
-                    className="mt-4"
-                    onClick={() => setSelectedSession(
-                      selectedSession === session.sessionId ? null : session.sessionId
-                    )}
-                  >
-                    {selectedSession === session.sessionId ? 'Cancel' : 'Transfer'}
-                  </Button>
-                </Card>
+                </div>
               ))}
-            </Grid>
-          </TabPanel>
-          <TabPanel>
-            <Grid numItems={1} className="gap-6 mt-6">
-              {availableAgents.map((agent) => (
-                <Card key={agent.id}>
-                  <Flex alignItems="center" justifyContent="between">
-                    <Flex alignItems="center" className="space-x-4">
-                      <UserIcon className="h-5 w-5" />
-                      <div>
-                        <Text>{agent.name}</Text>
-                        <Text className="text-gray-500">{agent.email}</Text>
-                      </div>
-                    </Flex>
-                    <Flex className="space-x-2">
-                      <Badge color={agent.status === 'available' ? 'green' : 'yellow'}>
-                        {agent.status}
-                      </Badge>
-                      <Badge color="blue">
-                        {agent.currentSessions.length} active
-                      </Badge>
-                    </Flex>
-                  </Flex>
-                </Card>
-              ))}
-            </Grid>
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+            </div>
+          </Card>
+
+          <Card>
+            <Title>Call Analysis</Title>
+            {selectedCall.sentiment && (
+              <div className="mt-4 space-y-6">
+                <div>
+                  <Text>Overall Sentiment</Text>
+                  <ProgressBar
+                    value={(selectedCall.sentiment.overall + 1) * 50}
+                    color={getSentimentColor(selectedCall.sentiment.overall)}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Text>Key Phrases</Text>
+                  <List className="mt-2">
+                    {selectedCall.sentiment.keyPhrases.map((phrase, index) => (
+                      <ListItem key={index}>
+                        <Flex justifyContent="start" className="space-x-2">
+                          <Text>{phrase.text}</Text>
+                          <Badge color={getSentimentColor(phrase.sentiment)}>
+                            {(phrase.sentiment * 100).toFixed(0)}%
+                          </Badge>
+                        </Flex>
+                      </ListItem>
+                    ))}
+                  </List>
+                </div>
+              </div>
+            )}
+          </Card>
+        </Grid>
+      )}
     </main>
-  );
+  )
 } 
