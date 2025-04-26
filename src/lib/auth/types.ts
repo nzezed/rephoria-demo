@@ -1,8 +1,4 @@
-export enum Role {
-  ADMIN = 'admin',
-  USER = 'user',
-  MANAGER = 'manager'
-}
+import { Role } from '@prisma/client';
 
 export interface AuthUser {
   id: string;

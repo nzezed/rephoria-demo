@@ -1,7 +1,7 @@
-import { PrismaClient, User, Prisma } from '@prisma/client';
+import { PrismaClient, User, Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { AuthUser, LoginCredentials, RegisterData, JWTPayload, Role, AuthResponse } from './types';
+import type { AuthUser, LoginCredentials, RegisterData, JWTPayload, AuthResponse } from './types';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, verifyPassword, generateVerificationToken, generatePasswordResetToken, generateJWT } from './utils';
 import { EmailService } from '@/lib/email/email.service';
@@ -79,7 +79,7 @@ export class AuthService {
           connect: { id: organization.id }
         },
         verificationToken,
-        role: orgUsers === 0 ? 'admin' : 'user', // Only first user is admin
+        role: orgUsers === 0 ? Role.ADMIN : Role.USER, // Only first user is admin
       },
     });
 
@@ -146,7 +146,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name || undefined,
-      role: user.role as Role,
+      role: user.role,
       organizationId: user.organizationId,
       isActive: user.isActive,
       createdAt: user.createdAt,
@@ -176,7 +176,14 @@ export class AuthService {
         throw new Error('Invalid session');
       }
 
-      return decoded;
+      const payload: JWTPayload = {
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        organizationId: decoded.organizationId,
+      };
+
+      return payload;
     } catch (error) {
       throw new Error('Invalid token');
     }
@@ -192,7 +199,7 @@ export class AuthService {
     const payload: JWTPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role as Role,
+      role: user.role,
       organizationId: user.organizationId,
     };
 
@@ -236,7 +243,7 @@ export class AuthService {
         connect: { id: organizationId }
       },
       verificationToken,
-      role: 'user',
+      role: Role.USER,
     };
 
     const user = await prisma.user.create({
