@@ -1,136 +1,120 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { toast } from '@/components/ui/use-toast';
 
-interface ResetPasswordFormProps {
+const resetPasswordSchema = z.object({
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(100, 'Password must be less than 100 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+export interface ResetPasswordFormProps {
   token: string;
 }
 
 export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
-  const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: '',
-  });
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const validateForm = () => {
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return false;
-    }
-    return true;
-  };
+  const form = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!validateForm()) return;
-
+  async function onSubmit(data: ResetPasswordFormData) {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          password: formData.password,
+          password: data.password,
         }),
       });
-      
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.error);
-      
-      // Redirect to login on success
-      router.push('/auth/login?reset=success');
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset password');
+
+      if (!response.ok) {
+        throw new Error('Failed to reset password');
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Your password has been reset. You can now log in with your new password.',
+      });
+
+      router.push('/auth/login');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to reset password. The link may have expired.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }
 
   return (
-    <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold">Reset Password</h1>
-        <p className="text-gray-500">Enter your new password below.</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium">
-            New Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="••••••••"
-            required
-            minLength={8}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="confirmPassword" className="block text-sm font-medium">
-            Confirm New Password
-          </label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="••••••••"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={`w-full py-2 px-4 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          {isLoading ? 'Resetting Password...' : 'Reset Password'}
-        </button>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>New Password</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  type="password"
+                  placeholder="Enter your new password"
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  type="password"
+                  placeholder="Confirm your new password"
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? 'Resetting...' : 'Reset Password'}
+        </Button>
       </form>
-
-      <div className="text-center text-sm">
-        <Link
-          href="/auth/login"
-          className="text-blue-600 hover:text-blue-700 font-medium"
-        >
-          Back to login
-        </Link>
-      </div>
-    </div>
+    </Form>
   );
 } 

@@ -8,12 +8,12 @@ import {
 
 export class EmailService {
   private static readonly transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
+    host: process.env.EMAIL_SERVER_HOST,
+    port: parseInt(process.env.EMAIL_SERVER_PORT || '587'),
+    secure: false,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: process.env.EMAIL_SERVER_USER,
+      pass: process.env.EMAIL_SERVER_PASSWORD,
     },
   });
 
@@ -22,8 +22,8 @@ export class EmailService {
     resetToken: string,
     name?: string
   ) {
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${resetToken}`;
-    const html = render(PasswordResetEmail({ resetLink, name }));
+    const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`;
+    const html = render(PasswordResetEmail({ resetLink, name })).toString();
 
     await this.sendEmail({
       to,
@@ -33,7 +33,7 @@ export class EmailService {
   }
 
   static async sendWelcomeEmail(to: string, name?: string) {
-    const html = render(WelcomeEmail({ name }));
+    const html = render(WelcomeEmail({ name })).toString();
 
     await this.sendEmail({
       to,
@@ -47,8 +47,8 @@ export class EmailService {
     verificationToken: string,
     name?: string
   ) {
-    const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify?token=${verificationToken}`;
-    const html = render(VerificationEmail({ verifyLink, name }));
+    const verifyLink = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`;
+    const html = render(VerificationEmail({ verifyLink, name })).toString();
 
     await this.sendEmail({
       to,
@@ -66,16 +66,30 @@ export class EmailService {
     subject: string;
     html: string;
   }) {
+    if (!process.env.EMAIL_SERVER_HOST || !process.env.EMAIL_SERVER_USER || !process.env.EMAIL_SERVER_PASSWORD) {
+      console.error('Email configuration is missing:', {
+        host: !!process.env.EMAIL_SERVER_HOST,
+        user: !!process.env.EMAIL_SERVER_USER,
+        pass: !!process.env.EMAIL_SERVER_PASSWORD,
+      });
+      throw new Error('Email service is not configured properly. Please check your environment variables.');
+    }
+
+    if (!process.env.EMAIL_FROM) {
+      console.error('EMAIL_FROM is not configured');
+      throw new Error('Email service is not configured properly. EMAIL_FROM is missing.');
+    }
+
     try {
       await this.transporter.sendMail({
-        from: process.env.SMTP_FROM,
+        from: process.env.EMAIL_FROM,
         to,
         subject,
         html,
       });
     } catch (error) {
       console.error('Failed to send email:', error);
-      throw new Error('Failed to send email');
+      throw new Error('Failed to send email. Please check your email configuration and try again.');
     }
   }
 } 

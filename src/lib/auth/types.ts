@@ -1,3 +1,5 @@
+export type Role = 'admin' | 'user';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -30,12 +32,6 @@ export interface JWTPayload {
   email: string;
   role: Role;
   organizationId: string;
-}
-
-export enum Role {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  USER = 'USER'
 }
 
 export interface Session {

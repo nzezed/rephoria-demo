@@ -61,6 +61,11 @@ export class AuthService {
       },
     });
 
+    // Check if this is the first user for this organization
+    const orgUsers = await prisma.user.count({
+      where: { organizationId: organization.id }
+    });
+
     const hashedPassword = await hashPassword(data.password);
     const verificationToken = generateVerificationToken();
 
@@ -74,15 +79,20 @@ export class AuthService {
           connect: { id: organization.id }
         },
         verificationToken,
-        role: 'admin', // First user of org is admin
+        role: orgUsers === 0 ? 'admin' : 'user', // Only first user is admin
       },
     });
 
-    await EmailService.sendVerificationEmail(
-      user.email,
-      verificationToken,
-      user.name || undefined
-    );
+    try {
+      await EmailService.sendVerificationEmail(
+        user.email,
+        verificationToken,
+        user.name || undefined
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Don't fail registration if email fails
+    }
 
     // Generate JWT token
     const token = generateJWT({
@@ -107,6 +117,11 @@ export class AuthService {
     // Check if user is active
     if (!user.isActive) {
       throw new Error('Account is disabled');
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      throw new Error('Please verify your email before logging in');
     }
 
     // Verify password
