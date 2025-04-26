@@ -32,7 +32,12 @@ export class CallAnalyzer {
         response_format: { type: 'json_object' }
       })
 
-      const analysis = JSON.parse(response.choices[0].message.content)
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No content in OpenAI response')
+      }
+
+      const analysis = JSON.parse(content)
       return {
         sentiment: analysis.sentiment,
         keyPhrases: analysis.keyPhrases
@@ -67,7 +72,12 @@ export class CallAnalyzer {
         response_format: { type: 'json_object' }
       })
 
-      return JSON.parse(response.choices[0].message.content)
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No content in OpenAI response')
+      }
+
+      return JSON.parse(content)
     } catch (error) {
       console.error('Error generating call summary:', error)
       return {
@@ -115,7 +125,12 @@ export class CallAnalyzer {
         response_format: { type: 'json_object' }
       })
 
-      return JSON.parse(response.choices[0].message.content)
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No content in OpenAI response')
+      }
+
+      return JSON.parse(content)
     } catch (error) {
       console.error('Error generating agent suggestions:', error)
       return {
@@ -145,10 +160,15 @@ export class CallAnalyzer {
         response_format: { type: 'json_object' }
       })
 
-      const analysis = JSON.parse(response.choices[0].message.content)
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No content in OpenAI response')
+      }
+
+      const analysis = JSON.parse(content)
       return {
         customerId,
-        lastContact: calls[calls.length - 1]?.timestamp || new Date(),
+        lastContact: new Date(),
         totalCalls: calls.length,
         calls,
         overallSentiment: analysis.overallSentiment,
