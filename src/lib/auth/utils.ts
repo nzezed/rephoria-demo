@@ -39,7 +39,7 @@ export function generateJWT(payload: JWTPayload, expiresIn: ExpiresIn = '24h'): 
     throw new Error('JWT_SECRET environment variable is not set');
   }
   
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn } as any);
 }
 
 export function verifyJWT(token: string): JWTPayload {
