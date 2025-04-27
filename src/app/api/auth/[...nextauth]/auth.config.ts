@@ -3,7 +3,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import { AuthService } from '@/lib/auth/auth.service';
-import { Role } from '@/lib/auth/types';
+import { Role } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -34,6 +34,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             organizationId: user.organizationId,
+            organizationSubdomain: user.organization.subdomain,
             isActive: user.isActive,
           };
         } catch (error) {
@@ -48,6 +49,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.organizationId = user.organizationId;
+        token.organizationSubdomain = user.organizationSubdomain;
         token.isActive = user.isActive;
       }
       return token;
@@ -57,6 +59,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
         session.user.organizationId = token.organizationId as string;
+        session.user.organizationSubdomain = token.organizationSubdomain as string;
+        session.user.isActive = token.isActive as boolean;
       }
       return session;
     },
