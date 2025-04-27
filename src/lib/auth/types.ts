@@ -7,6 +7,7 @@ export interface AuthUser {
   name?: string;
   role: Role;
   organizationId: string;
+  organizationSubdomain: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

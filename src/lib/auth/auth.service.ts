@@ -108,6 +108,9 @@ export class AuthService {
     // Find user with all fields
     const user = await prismaClient.user.findUnique({
       where: { email: credentials.email },
+      include: {
+        organization: true
+      }
     });
 
     if (!user) {
@@ -148,6 +151,7 @@ export class AuthService {
       name: user.name || undefined,
       role: user.role,
       organizationId: user.organizationId,
+      organizationSubdomain: user.organization.subdomain,
       isActive: user.isActive,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
