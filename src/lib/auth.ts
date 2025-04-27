@@ -42,6 +42,8 @@ export const authOptions: AuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          isActive: user.isActive,
           organizationId: user.organizationId,
           organizationSubdomain: user.organization.subdomain
         };
@@ -52,6 +54,8 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role;
+        token.isActive = user.isActive;
         token.organizationId = user.organizationId;
         token.organizationSubdomain = user.organizationSubdomain;
       }
@@ -60,6 +64,8 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role;
+        session.user.isActive = token.isActive;
         session.user.organizationId = token.organizationId as string;
         session.user.organizationSubdomain = token.organizationSubdomain as string;
       }
