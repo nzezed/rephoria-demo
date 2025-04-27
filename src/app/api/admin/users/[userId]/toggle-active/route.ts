@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
+import { Role } from '@prisma/client'
 
 export async function POST(
   request: Request,
@@ -9,7 +10,7 @@ export async function POST(
 ) {
   // Check if user is authenticated and is admin
   const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || session.user.role !== Role.ADMIN) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -18,10 +19,10 @@ export async function POST(
     const body = await request.json()
     const { isActive } = body
 
-    // Don't allow deactivating your own account
+    // Don't allow toggling your own status
     if (userId === session.user.id) {
       return NextResponse.json(
-        { error: 'Cannot deactivate your own account' },
+        { error: 'Cannot change your own status' },
         { status: 400 }
       )
     }
@@ -43,9 +44,9 @@ export async function POST(
 
     return NextResponse.json(user)
   } catch (error) {
-    console.error('Failed to update user:', error)
+    console.error('Failed to toggle user status:', error)
     return NextResponse.json(
-      { error: 'Failed to update user' },
+      { error: 'Failed to toggle user status' },
       { status: 500 }
     )
   }
