@@ -19,6 +19,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { AdminUser, UserRole } from '@/lib/admin/types'
+import { Role } from '@prisma/client'
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -28,7 +29,7 @@ export default function AdminDashboard() {
 
   // Protect the route
   useEffect(() => {
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!session?.user || session.user.role !== Role.ADMIN) {
       router.push('/dashboard')
     }
   }, [session, router])
@@ -104,7 +105,7 @@ export default function AdminDashboard() {
     }
   }
 
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || session.user.role !== Role.ADMIN) {
     return null
   }
 
