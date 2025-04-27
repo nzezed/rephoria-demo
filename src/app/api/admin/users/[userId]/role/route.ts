@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { UserRole } from '@/lib/admin/types'
+import { Role } from '@prisma/client'
 
 export async function POST(
   request: Request,
@@ -10,7 +11,7 @@ export async function POST(
 ) {
   // Check if user is authenticated and is admin
   const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || session.user.role !== Role.ADMIN) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
