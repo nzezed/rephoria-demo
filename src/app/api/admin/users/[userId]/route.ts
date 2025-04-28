@@ -1,18 +1,19 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/prisma'
-import { authOptions } from '@/lib/auth'
-import { UserRole } from '@/lib/admin/types'
-import { Role } from '@prisma/client'
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
+import { Role } from '@prisma/client';
+import { Permission, hasPermission } from '@/lib/auth/permissions'; // Import Permission and hasPermission
 
 export async function DELETE(
   request: Request,
   { params }: { params: { userId: string } }
 ) {
-  // Check if user is authenticated and is admin
-  const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== Role.ADMIN) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions);
+
+  // Check if user is authenticated and has permission to delete users
+  if (!session?.user || !hasPermission(session.user.role, Permission.DELETE_USERS)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -28,11 +29,25 @@ export async function DELETE(
 
     await prisma.user.delete({
       where: { id: userId },
-    })
+    });
 
-    return NextResponse.json({ success: true })
+    // --- Audit Log Entry ---
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id, // The admin/manager performing the action
+          action: 'USER_DELETE',
+          details: `Deleted user ID: ${userId}`,
+        },
+      });
+    } catch (auditError) {
+      console.error('Failed to create audit log for user deletion:', auditError);
+    }
+    // --- End Audit Log ---
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete user:', error)
+    console.error('Failed to delete user:', error);
     return NextResponse.json(
       { error: 'Failed to delete user' },
       { status: 500 }
@@ -44,10 +59,11 @@ export async function POST(
   request: Request,
   { params }: { params: { userId: string } }
 ) {
-  // Check if user is authenticated and is admin
-  const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== Role.ADMIN) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions);
+
+  // Check if user is authenticated and has permission to update users
+  if (!session?.user || !hasPermission(session.user.role, Permission.UPDATE_USERS)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -85,14 +101,28 @@ export async function POST(
         createdAt: true,
         lastLoginAt: true,
       },
-    })
+    });
 
-    return NextResponse.json(user)
+    // --- Audit Log Entry ---
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id, // The admin/manager performing the action
+          action: 'USER_ROLE_UPDATE',
+          details: `Updated role for user ID: ${userId} to ${role}`,
+        },
+      });
+    } catch (auditError) {
+      console.error('Failed to create audit log for role update:', auditError);
+    }
+    // --- End Audit Log ---
+
+    return NextResponse.json(user);
   } catch (error) {
-    console.error('Failed to update user role:', error)
+    console.error('Failed to update user role:', error);
     return NextResponse.json(
       { error: 'Failed to update user role' },
       { status: 500 }
     )
   }
-} 
+}

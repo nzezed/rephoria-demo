@@ -1,19 +1,29 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/prisma'
-import { authOptions } from '@/lib/auth'
-import { AdminUser } from '@/lib/admin/types'
-import { Role } from '@prisma/client'
+import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
+import { Role } from '@prisma/client';
+import { Permission, hasPermission } from '@/lib/auth/permissions'; // Import Permission and hasPermission
 
 export async function GET() {
-  // Check if user is authenticated and is admin
-  const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== Role.ADMIN) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions);
+
+  // Check if user is authenticated and has permission to view users
+  if (!session?.user || !hasPermission(session.user.role, Permission.VIEW_USERS)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 }); // Use 403 Forbidden for permission issues
+  }
+
+  // Ensure organizationId is present in the session user object
+  if (!session?.user?.organizationId) {
+    console.error('Organization ID missing from session for user:', session?.user?.id);
+    return NextResponse.json({ error: 'Internal server error: Missing organization context' }, { status: 500 });
   }
 
   try {
     const users = await prisma.user.findMany({
+      where: {
+        organizationId: session.user.organizationId, // Filter by organization
+      },
       select: {
         id: true,
         email: true,
@@ -37,4 +47,4 @@ export async function GET() {
       { status: 500 }
     )
   }
-} 
+}

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai'
 import { writeFileSync, unlinkSync, createReadStream } from 'fs'
 import { join } from 'path'
@@ -24,9 +24,9 @@ export async function POST(
   }
   const openai = new OpenAI({ apiKey })
 
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const callId = params.id
@@ -68,7 +68,7 @@ export async function POST(
     const analysisRes = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
-        { role: 'system', content: 'You are a call center analytics assistant.' },
+        { role: 'system', content: 'You are a call center analytics assistant. Analyze this call transcript and extract insights and create a summary.' },
         { role: 'user', content: `Analyze this call transcript and extract insights: ${text}` }
       ],
       response_format: { type: 'json_object' }
@@ -93,11 +93,11 @@ export async function POST(
     // Update call status
     await client.call.update({ where: { id: callId }, data: { status: 'processed' } })
 
-    return NextResponse.json({ status: 'processed' })
+    return NextResponse.json({ status: 'processed', analysis })
   } catch (error) {
     console.error('Error processing call:', error)
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
   } finally {
     try { unlinkSync(tempPath) } catch {} // cleanup
   }
-} 
+}

@@ -79,13 +79,28 @@ export async function POST(request: NextRequest) {
 
   try {
     // Process the webhook data
-    // TODO: Implement webhook processing logic
-    console.log('Received valid Twilio webhook:', params)
-    
-    return new Response('Webhook processed successfully', { status: 200 })
+    console.log('Received valid Twilio webhook:', params);
+
+    const callSid = params.CallSid;
+    const callStatus = params.CallStatus;
+
+    if (!callSid) {
+      console.error('CallSid is missing in the webhook payload');
+      return new Response('CallSid is missing', { status: 400 });
+    }
+
+    // Update the call record in the database
+    await prisma.call.update({
+      where: { twilioCallSid: callSid },
+      data: {
+        status: callStatus,
+      },
+    });
+
+    return new Response('Webhook processed successfully', { status: 200 });
   } catch (error) {
-    console.error('Error processing Twilio webhook:', error)
-    return new Response('Internal server error', { status: 500 })
+    console.error('Error processing Twilio webhook:', error);
+    return new Response('Internal server error', { status: 500 });
   }
 }
 
@@ -130,4 +145,4 @@ export async function PUT(request: Request) {
     console.error('Error updating recording status:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-} 
+}

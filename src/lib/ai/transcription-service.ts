@@ -1,11 +1,11 @@
-import { CallTranscript, TranscriptSegment } from '../../types/platform-integration'
+import { CallTranscript, TranscriptSegment } from '../../types/platform-integration';
 
 export class TranscriptionService {
-  private activeTranscriptions: Map<string, CallTranscript> = new Map()
-  private onTranscriptUpdate: (callId: string, transcript: CallTranscript) => void
+  private activeTranscriptions: Map<string, CallTranscript> = new Map();
+  private onTranscriptUpdate: (callId: string, transcript: CallTranscript) => void;
 
   constructor(onTranscriptUpdate: (callId: string, transcript: CallTranscript) => void) {
-    this.onTranscriptUpdate = onTranscriptUpdate
+    this.onTranscriptUpdate = onTranscriptUpdate;
   }
 
   startTranscription(callId: string): void {
@@ -52,7 +52,7 @@ export class TranscriptionService {
 
   // This method will be implemented with actual speech-to-text service
   async processAudioChunk(callId: string, audioChunk: ArrayBuffer): Promise<void> {
-    // TODO: Implement real-time speech-to-text processing
+    // TODO: Implement real-time speech-to-text processing using Deepgram
     // For now, this is a placeholder that would:
     // 1. Convert audio to text using a service like Deepgram
     // 2. Determine the speaker (using voice identification)
@@ -63,4 +63,4 @@ export class TranscriptionService {
     const mockSpeaker = Math.random() > 0.5 ? 'AGENT' : 'CUSTOMER'
     this.addSegment(callId, mockText, mockSpeaker)
   }
-} 
+}
