@@ -47,7 +47,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          password: data.password,
+          newPassword: data.password,
         }),
       });
 
