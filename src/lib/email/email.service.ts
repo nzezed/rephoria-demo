@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { render } from '@react-email/render';
 import {
   PasswordResetEmail,
@@ -6,24 +6,18 @@ import {
   VerificationEmail,
 } from './templates';
 
-export class EmailService {
-  private static readonly transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_SERVER_HOST,
-    port: parseInt(process.env.EMAIL_SERVER_PORT || '587'),
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_SERVER_USER,
-      pass: process.env.EMAIL_SERVER_PASSWORD,
-    },
-  });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
+export class EmailService {
   static async sendPasswordResetEmail(
     to: string,
     resetToken: string,
     name?: string
   ) {
+    console.log('Preparing password reset email for:', to);
     const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`;
     const html = render(PasswordResetEmail({ resetLink, name })).toString();
+    console.log('Password reset link generated:', resetLink);
 
     await this.sendEmail({
       to,
@@ -33,6 +27,7 @@ export class EmailService {
   }
 
   static async sendWelcomeEmail(to: string, name?: string) {
+    console.log('Preparing welcome email for:', to);
     const html = render(WelcomeEmail({ name })).toString();
 
     await this.sendEmail({
@@ -47,8 +42,10 @@ export class EmailService {
     verificationToken: string,
     name?: string
   ) {
+    console.log('Preparing verification email for:', to);
     const verifyLink = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`;
     const html = render(VerificationEmail({ verifyLink, name })).toString();
+    console.log('Verification link generated:', verifyLink);
 
     await this.sendEmail({
       to,
@@ -66,30 +63,30 @@ export class EmailService {
     subject: string;
     html: string;
   }) {
-    if (!process.env.EMAIL_SERVER_HOST || !process.env.EMAIL_SERVER_USER || !process.env.EMAIL_SERVER_PASSWORD) {
-      console.error('Email configuration is missing:', {
-        host: !!process.env.EMAIL_SERVER_HOST,
-        user: !!process.env.EMAIL_SERVER_USER,
-        pass: !!process.env.EMAIL_SERVER_PASSWORD,
-      });
+    if (!process.env.RESEND_API_KEY) {
+      console.error('Resend API key is missing');
       throw new Error('Email service is not configured properly. Please check your environment variables.');
     }
 
-    if (!process.env.EMAIL_FROM) {
-      console.error('EMAIL_FROM is not configured');
-      throw new Error('Email service is not configured properly. EMAIL_FROM is missing.');
-    }
-
     try {
-      await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+      console.log('Attempting to send email to:', to);
+      const { data, error } = await resend.emails.send({
+        from: 'Rephoria <onboarding@resend.dev>',
         to,
         subject,
         html,
       });
+
+      if (error) {
+        console.error('Failed to send email:', error);
+        throw new Error('Failed to send email. Please try again later.');
+      }
+
+      console.log('Email sent successfully:', data);
+      return data;
     } catch (error) {
       console.error('Failed to send email:', error);
-      throw new Error('Failed to send email. Please check your email configuration and try again.');
+      throw new Error('Failed to send email. Please try again later.');
     }
   }
 } 
