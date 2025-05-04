@@ -10,7 +10,16 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    // Check for CSRF token when component mounts
+    const token = getCookie('csrf_token');
+    if (token) {
+      setCsrfToken(token as string);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,9 +27,8 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      const csrfToken = getCookie('csrf_token');
       if (!csrfToken) {
-        throw new Error('CSRF token not found');
+        throw new Error('Please refresh the page and try again');
       }
 
       const res = await fetch('/api/auth/login', {
