@@ -8,6 +8,7 @@ export default function TwilioIntegration() {
   const [credentials, setCredentials] = useState({
     accountSid: '',
     authToken: '',
+    phoneNumber: '',
   });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'disconnected' | 'connected'>('disconnected');
@@ -27,11 +28,14 @@ export default function TwilioIntegration() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: 'twilio',
+          name: 'Twilio',
           type: 'call_platform',
           config: {
             accountSid: credentials.accountSid,
             authToken: credentials.authToken,
+            phoneNumber: credentials.phoneNumber,
           },
+          status: 'connected',
         }),
       });
 
@@ -65,6 +69,7 @@ export default function TwilioIntegration() {
           <ul className="list-disc ml-6 mt-2 space-y-2">
             <li>A Twilio account (create one at twilio.com if needed)</li>
             <li>Access to your Twilio Account SID and Auth Token</li>
+            <li>A Twilio phone number to make calls from</li>
             <li>Permission to configure webhooks in your Twilio account</li>
           </ul>
           <Button 
@@ -102,10 +107,24 @@ export default function TwilioIntegration() {
                 }))}
               />
             </div>
+            <div>
+              <Text>Phone Number</Text>
+              <TextInput
+                placeholder="+1234567890"
+                value={credentials.phoneNumber}
+                onChange={(e) => setCredentials(prev => ({
+                  ...prev,
+                  phoneNumber: e.target.value
+                }))}
+              />
+              <Text className="mt-1 text-sm text-gray-500">
+                Enter your Twilio phone number in E.164 format (e.g., +1234567890)
+              </Text>
+            </div>
             <Button 
               loading={loading}
               onClick={handleConnect}
-              disabled={!credentials.accountSid || !credentials.authToken}
+              disabled={!credentials.accountSid || !credentials.authToken || !credentials.phoneNumber}
             >
               Connect Twilio
             </Button>
@@ -126,7 +145,7 @@ export default function TwilioIntegration() {
             <ol className="list-decimal ml-6 space-y-2">
               <li>Go to your Twilio Console</li>
               <li>Navigate to Phone Numbers → Manage → Active numbers</li>
-              <li>Click on your phone number</li>
+              <li>Click on your phone number ({credentials.phoneNumber})</li>
               <li>Under "Voice & Fax", paste the webhook URL above into "A Call Comes In"</li>
               <li>Save your changes</li>
             </ol>
