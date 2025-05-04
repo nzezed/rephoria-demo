@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { AuthService } from '@/lib/auth/auth.service';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { generateVerificationToken } from '@/lib/auth/utils';
+import { EmailService } from '@/lib/email/email.service';
 
 export const runtime = 'nodejs';
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     // Generate new verification token
-    const verificationToken = AuthService.generateToken(user);
+    const verificationToken = generateVerificationToken();
     
     // Update user with new token
     await prisma.user.update({
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     });
 
     // Send verification email
-    await AuthService.sendVerificationEmail(
+    await EmailService.sendVerificationEmail(
       user.email,
       verificationToken,
       user.name || undefined
