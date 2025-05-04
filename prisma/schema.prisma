@@ -115,6 +115,7 @@ model Call {
   organizationId String
   agent          Agent?       @relation(fields: [agentId], references: [id])
   agentId        String?
+  twilioCallSid  String?     @unique
   startTime      DateTime
   endTime        DateTime?
   recordingUrl   String?

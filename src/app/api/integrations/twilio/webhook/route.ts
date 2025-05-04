@@ -89,12 +89,24 @@ export async function POST(request: NextRequest) {
       return new Response('CallSid is missing', { status: 400 });
     }
 
-    // Update the call record in the database
-    await prisma.call.update({
+    // Try to find the existing call or create a new one
+    const call = await prisma.call.upsert({
       where: { twilioCallSid: callSid },
-      data: {
+      update: {
         status: callStatus,
       },
+      create: {
+        twilioCallSid: callSid,
+        status: callStatus,
+        startTime: new Date(),
+        // You'll need to set the organizationId. For now, let's find the first organization
+        // In production, you should determine this based on the Twilio number or other context
+        organization: {
+          connect: {
+            id: (await prisma.organization.findFirst())?.id
+          }
+        }
+      }
     });
 
     return new Response('Webhook processed successfully', { status: 200 });
