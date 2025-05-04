@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Title, Text, Card } from '@tremor/react'
-import { CallMonitoring } from '@/components/dashboard/CallMonitoring'
+import { CallMonitoring } from '../../components/dashboard/CallMonitoring'
 
 export default function Dashboard() {
   return (
