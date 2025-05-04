@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Title, Text, Card } from '@tremor/react'
 import { CallMonitoring } from '../../components/CallMonitoring'
+import { TestCall } from '../../components/TestCall'
 
 export default function Dashboard() {
   return (
@@ -12,6 +13,10 @@ export default function Dashboard() {
       
       <div className="mt-6">
         <CallMonitoring />
+      </div>
+
+      <div className="mt-6">
+        <TestCall />
       </div>
 
       <div className="mt-6">
