@@ -16,7 +16,7 @@ export class EmailService {
   ) {
     console.log('Preparing password reset email for:', to);
     const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`;
-    const html = render(PasswordResetEmail({ resetLink, name })).toString();
+    const html = await render(PasswordResetEmail({ resetLink, name }));
     console.log('Password reset link generated:', resetLink);
 
     await this.sendEmail({
@@ -28,7 +28,7 @@ export class EmailService {
 
   static async sendWelcomeEmail(to: string, name?: string) {
     console.log('Preparing welcome email for:', to);
-    const html = render(WelcomeEmail({ name })).toString();
+    const html = await render(WelcomeEmail({ name }));
 
     await this.sendEmail({
       to,
@@ -44,7 +44,7 @@ export class EmailService {
   ) {
     console.log('Preparing verification email for:', to);
     const verifyLink = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`;
-    const html = render(VerificationEmail({ verifyLink, name })).toString();
+    const html = await render(VerificationEmail({ verifyLink, name }));
     console.log('Verification link generated:', verifyLink);
 
     await this.sendEmail({
