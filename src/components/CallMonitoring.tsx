@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Call, CallStatus } from '@prisma/client';
+import { Call } from '@prisma/client';
 
 interface CallStats {
   totalCalls: number;
   activeCalls: number;
   averageDuration: number;
-  callsByStatus: Record<CallStatus, number>;
+  callsByStatus: Record<string, number>;
 }
 
 export function CallMonitoring() {
@@ -16,7 +16,7 @@ export function CallMonitoring() {
     totalCalls: 0,
     activeCalls: 0,
     averageDuration: 0,
-    callsByStatus: {} as Record<CallStatus, number>,
+    callsByStatus: {},
   });
 
   useEffect(() => {
