@@ -14,15 +14,15 @@ import { GenesysEventProcessor } from './genesys-event-processor'
 
 export class GenesysPlatform extends BasePlatformIntegration {
   private apiClient: any
-  private webSocket: any
+  private webSocket: GenesysWebSocket
   private eventProcessor: GenesysEventProcessor
   private isInitialized: boolean = false
 
   constructor(config: PlatformConfig, events: PlatformEvents) {
     super(config, events)
     this.apiClient = PureCloud.ApiClient.instance
-    this.webSocket = new PureCloud.WebSocket()
     this.eventProcessor = new GenesysEventProcessor(this.events)
+    this.webSocket = new GenesysWebSocket(this.handleWebSocketMessage.bind(this))
 
     // Set Genesys-specific capabilities
     this.status.capabilities = {

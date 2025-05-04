@@ -28,13 +28,23 @@ export const authOptions: NextAuthOptions = {
             password: credentials.password,
           });
 
+          // Fetch the organization data
+          const organization = await prisma.organization.findUnique({
+            where: { id: user.organizationId },
+            select: { subdomain: true }
+          });
+
+          if (!organization?.subdomain) {
+            throw new Error('Organization not found');
+          }
+
           return {
             id: user.id,
             email: user.email,
-            name: user.name,
+            name: user.name || '',
             role: user.role,
             organizationId: user.organizationId,
-            organizationSubdomain: user.organization.subdomain,
+            organizationSubdomain: organization.subdomain,
             isActive: user.isActive,
           };
         } catch (error) {

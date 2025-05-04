@@ -21,7 +21,11 @@ export const authOptions: AuthOptions = {
             email: credentials.email
           },
           include: {
-            organization: true
+            organization: {
+              select: {
+                subdomain: true
+              }
+            }
           }
         });
 
@@ -36,6 +40,10 @@ export const authOptions: AuthOptions = {
 
         if (!isCorrectPassword) {
           throw new Error('Invalid credentials');
+        }
+
+        if (!user.organization?.subdomain) {
+          throw new Error('Organization not found');
         }
 
         return {

@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { EmailVerificationForm } from '@/components/auth/EmailVerificationForm';
 
 export default function VerifyEmailPage() {
@@ -14,7 +15,14 @@ export default function VerifyEmailPage() {
             Please wait while we verify your email address...
           </p>
         </div>
-        <EmailVerificationForm />
+        <Suspense fallback={
+          <div className="flex items-center justify-center space-x-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p>Loading verification form...</p>
+          </div>
+        }>
+          <EmailVerificationForm />
+        </Suspense>
       </div>
     </div>
   );
