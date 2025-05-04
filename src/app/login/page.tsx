@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
+import { generateToken } from '@/lib/token';
+import { setCookie, getCookie } from 'cookies-next';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -18,11 +20,17 @@ export default function LoginPage() {
   const [csrfToken, setCsrfToken] = useState('');
 
   useEffect(() => {
-    // Get CSRF token from cookie
-    const cookies = document.cookie.split(';');
-    const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('csrf_token='));
-    if (csrfCookie) {
-      setCsrfToken(csrfCookie.split('=')[1].trim());
+    // Generate and set CSRF token when page loads
+    const token = getCookie('csrf_token');
+    if (!token) {
+      const newToken = generateToken();
+      setCookie('csrf_token', newToken, {
+        maxAge: 60 * 60, // 1 hour
+        path: '/',
+      });
+      setCsrfToken(newToken);
+    } else {
+      setCsrfToken(token as string);
     }
   }, []);
 
@@ -31,6 +39,10 @@ export default function LoginPage() {
     setError('');
 
     try {
+      if (!csrfToken) {
+        throw new Error('Please refresh the page and try again');
+      }
+
       const data = loginSchema.parse({ email, password, csrfToken });
       
       const response = await fetch('/api/auth/login', {
@@ -39,7 +51,6 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
-        credentials: 'include', // Important for cookies
       });
 
       if (!response.ok) {
