@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getCookie } from 'cookies-next';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -17,10 +18,19 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
+      const csrfToken = getCookie('csrf_token');
+      if (!csrfToken) {
+        throw new Error('CSRF token not found');
+      }
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          email, 
+          password,
+          csrfToken 
+        }),
       });
       
       const data = await res.json();
