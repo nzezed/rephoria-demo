@@ -53,7 +53,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    // Check if we have any integrations
+    // Check if we have any integrations for this organization
     const count = await prisma.integration.count({
       where: { organizationId: session.user.organizationId }
     })
@@ -64,11 +64,12 @@ export async function GET() {
         data: DEFAULT_INTEGRATIONS.map(integration => ({
           ...integration,
           organizationId: session.user.organizationId,
+          config: {}, // Initialize with empty config
         })),
       })
     }
 
-    // Fetch all integrations
+    // Fetch all integrations for this organization
     const integrations = await prisma.integration.findMany({
       where: { organizationId: session.user.organizationId },
       orderBy: { createdAt: 'desc' },

@@ -23,23 +23,49 @@ export default function TwilioIntegration() {
   const handleConnect = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/integrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'twilio',
-          name: 'Twilio',
-          type: 'call_platform',
-          config: {
-            accountSid: credentials.accountSid,
-            authToken: credentials.authToken,
-            phoneNumber: credentials.phoneNumber,
-          },
-          status: 'connected',
-        }),
-      });
+      // First, find the existing Twilio integration
+      const response = await fetch('/api/integrations');
+      const integrations = await response.json();
+      const existingTwilio = integrations.find((i: any) => i.provider === 'twilio');
 
-      if (!response.ok) throw new Error('Failed to connect');
+      if (existingTwilio) {
+        // Update existing integration
+        const updateResponse = await fetch('/api/integrations', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: existingTwilio.id,
+            status: 'connected',
+            config: {
+              accountSid: credentials.accountSid,
+              authToken: credentials.authToken,
+              phoneNumber: credentials.phoneNumber,
+            },
+            lastSync: new Date(),
+          }),
+        });
+
+        if (!updateResponse.ok) throw new Error('Failed to update integration');
+      } else {
+        // Create new integration if none exists
+        const createResponse = await fetch('/api/integrations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: 'twilio',
+            name: 'Twilio',
+            type: 'call_platform',
+            config: {
+              accountSid: credentials.accountSid,
+              authToken: credentials.authToken,
+              phoneNumber: credentials.phoneNumber,
+            },
+            status: 'connected',
+          }),
+        });
+
+        if (!createResponse.ok) throw new Error('Failed to create integration');
+      }
       
       setStatus('connected');
       setStep(3);

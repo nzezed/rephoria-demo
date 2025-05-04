@@ -8,16 +8,15 @@ import type { Prisma, Integration } from '@prisma/client';
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
 interface TwilioConfig {
-  apiKey: string;
-  accountId: string;
-  region?: string;
-  environment?: 'production' | 'sandbox';
+  accountSid: string;
+  authToken: string;
+  phoneNumber: string;
 }
 
 function isTwilioConfig(config: unknown): config is TwilioConfig {
   if (!config || typeof config !== 'object') return false;
   const c = config as Record<string, unknown>;
-  return typeof c.apiKey === 'string' && typeof c.accountId === 'string';
+  return typeof c.accountSid === 'string' && typeof c.authToken === 'string' && typeof c.phoneNumber === 'string';
 }
 
 /**
@@ -50,7 +49,7 @@ async function validateTwilioRequest(webhookUrl: string, params: any, twilioSign
       return false
     }
 
-    const authToken = configData.apiKey
+    const authToken = configData.authToken
     if (!authToken) {
       console.error('No Twilio auth token found in integration config')
       return false
