@@ -11,6 +11,7 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
+  const [showResendVerification, setShowResendVerification] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,6 +21,26 @@ export function LoginForm() {
       setCsrfToken(token as string);
     }
   }, []);
+
+  const handleResendVerification = async () => {
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to resend verification email');
+      }
+
+      setError('Verification email sent. Please check your inbox.');
+      setShowResendVerification(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend verification email');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +67,12 @@ export function LoginForm() {
       
       const data = await res.json();
       
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        if (data.error === 'Email not verified') {
+          setShowResendVerification(true);
+        }
+        throw new Error(data.error);
+      }
       
       // Redirect to dashboard on success
       router.push('/dashboard');
@@ -69,6 +95,15 @@ export function LoginForm() {
         {error && (
           <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
             {error}
+            {showResendVerification && (
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                className="ml-2 text-blue-600 hover:text-blue-700 underline"
+              >
+                Resend verification email
+              </button>
+            )}
           </div>
         )}
 
