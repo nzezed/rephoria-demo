@@ -68,7 +68,7 @@ export function LoginForm() {
       const data = await res.json();
       
       if (!res.ok) {
-        if (data.error === 'Email not verified') {
+        if (data.error === 'Please verify your email before logging in') {
           setShowResendVerification(true);
         }
         throw new Error(data.error);
@@ -85,21 +85,21 @@ export function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
+    <div className="w-full max-w-md p-8 space-y-6 bg-gray-900 rounded-lg shadow-lg">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold">Welcome Back</h1>
-        <p className="text-gray-500">Sign in to your account</p>
+        <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
+        <p className="text-gray-400">Sign in to your account</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+          <div className="p-3 text-sm text-red-400 bg-red-900/50 rounded-md">
             {error}
             {showResendVerification && (
               <button
                 type="button"
                 onClick={handleResendVerification}
-                className="ml-2 text-blue-600 hover:text-blue-700 underline"
+                className="ml-2 text-blue-400 hover:text-blue-300 underline"
               >
                 Resend verification email
               </button>
@@ -108,7 +108,7 @@ export function LoginForm() {
         )}
 
         <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-300">
             Email
           </label>
           <input
@@ -116,14 +116,14 @@ export function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="you@example.com"
             required
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-300">
             Password
           </label>
           <input
@@ -131,7 +131,7 @@ export function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="••••••••"
             required
           />
@@ -149,12 +149,21 @@ export function LoginForm() {
       </form>
 
       <div className="text-center text-sm">
-        <span className="text-gray-500">Don't have an account?</span>{' '}
+        <span className="text-gray-400">Don't have an account?</span>{' '}
         <Link
           href="/auth/register"
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="text-blue-400 hover:text-blue-300 font-medium"
         >
           Sign up
+        </Link>
+      </div>
+
+      <div className="text-center">
+        <Link
+          href="/auth/forgot-password"
+          className="text-sm text-blue-400 hover:text-blue-300"
+        >
+          Forgot password?
         </Link>
       </div>
     </div>
