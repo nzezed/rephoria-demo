@@ -126,6 +126,25 @@ export default function IntegrationsPage() {
     }
   }
 
+  const handleDisconnect = async (integrationId: string) => {
+    try {
+      const response = await fetch('/api/integrations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ integrationId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to disconnect integration');
+      }
+
+      // Refresh integrations list
+      await fetchIntegrations();
+    } catch (error) {
+      console.error('Error disconnecting integration:', error);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
@@ -274,7 +293,7 @@ export default function IntegrationsPage() {
                 {integration.status === 'connected' && (
                   <Button
                     color="red"
-                    onClick={() => router.push(`/dashboard/integrations/${integration.provider}/disconnect`)}
+                    onClick={() => handleDisconnect(integration.id)}
                   >
                     Disconnect
                   </Button>
