@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     const verificationToken = generateVerificationToken();
     console.log('Generated verification token:', verificationToken);
     
-    const verifyLink = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`;
+    const verifyLink = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${verificationToken}`;
     console.log('Generated verification link:', verifyLink);
     
     // Update user with new token
