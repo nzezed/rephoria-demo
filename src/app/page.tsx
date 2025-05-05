@@ -15,7 +15,7 @@ export default function Home() {
           Transform Your Call Center with AI
         </h1>
         <Link
-          href="/dashboard"
+          href="/auth/register"
           className="px-8 py-3 text-lg font-semibold text-white bg-rephoria-600 rounded-full hover:bg-rephoria-700 transition-colors"
         >
           Get Started

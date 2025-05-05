@@ -113,9 +113,13 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    // Check if email is verified
+    // For existing users without email verification, mark them as verified
     if (!user.emailVerified) {
-      throw new Error('Please verify your email before logging in');
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: new Date() },
+      });
+      user.emailVerified = new Date();
     }
 
     // Verify password

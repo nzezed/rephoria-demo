@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     const data = forgotPasswordSchema.parse(body);
     console.log('Email validated successfully');
 
+    console.log('Initiating password reset...');
     await AuthService.initiatePasswordReset(data.email);
     console.log('Password reset initiated successfully');
 
@@ -26,12 +27,22 @@ export async function POST(request: Request) {
     console.error('Password reset request error:', error);
     
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       return NextResponse.json(
         { error: 'Invalid input', details: error.errors },
         { status: 400 }
       );
     }
 
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+
+    console.error('Unknown error:', error);
     return NextResponse.json(
       { error: 'Failed to process password reset request' },
       { status: 500 }
