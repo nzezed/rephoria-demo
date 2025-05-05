@@ -115,7 +115,12 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    console.log('User found:', { id: user.id, email: user.email, emailVerified: user.emailVerified });
+    console.log('User found:', { 
+      id: user.id, 
+      email: user.email, 
+      emailVerified: user.emailVerified,
+      hashedPassword: user.hashedPassword ? 'exists' : 'missing'
+    });
 
     // For existing users without email verification, mark them as verified
     if (!user.emailVerified) {
@@ -129,7 +134,17 @@ export class AuthService {
 
     // Verify password
     console.log('Verifying password...');
+    console.log('Input password length:', password.length);
+    console.log('Hashed password exists:', !!user.hashedPassword);
+    
+    if (!user.hashedPassword) {
+      console.error('No hashed password found for user');
+      throw new Error('Invalid credentials');
+    }
+
     const isValid = await verifyPassword(password, user.hashedPassword);
+    console.log('Password verification result:', isValid);
+    
     if (!isValid) {
       console.error('Invalid password for user:', email);
       throw new Error('Invalid credentials');

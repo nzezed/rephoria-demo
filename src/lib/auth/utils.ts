@@ -17,7 +17,18 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+  console.log('Verifying password...');
+  console.log('Input password length:', password.length);
+  console.log('Hashed password length:', hashedPassword.length);
+  
+  try {
+    const result = await bcrypt.compare(password, hashedPassword);
+    console.log('Password verification result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error verifying password:', error);
+    throw error;
+  }
 }
 
 export function generateToken(length: number = TOKEN_BYTES): string {
