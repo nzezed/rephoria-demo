@@ -20,6 +20,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   console.log('Verifying password...');
   console.log('Input password length:', password.length);
   console.log('Hashed password length:', hashedPassword.length);
+  console.log('Hashed password format:', hashedPassword.startsWith('$2') ? 'bcrypt' : 'unknown');
   
   try {
     const result = await bcrypt.compare(password, hashedPassword);
@@ -76,4 +77,9 @@ export function generateVerificationToken(): string {
 
 export function generatePasswordResetToken(): string {
   return generateToken(32);
+}
+
+// Helper function to check if a string is a valid bcrypt hash
+export function isValidBcryptHash(hash: string): boolean {
+  return hash.startsWith('$2') && hash.length >= 60;
 } 

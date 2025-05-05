@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { AuthUser, LoginCredentials, RegisterData, JWTPayload, AuthResponse } from './types';
 import { prisma } from '@/lib/prisma';
-import { hashPassword, verifyPassword, generateVerificationToken, generatePasswordResetToken, generateJWT } from './utils';
+import { hashPassword, verifyPassword, generateVerificationToken, generatePasswordResetToken, generateJWT, isValidBcryptHash } from './utils';
 import { EmailService } from '@/lib/email/email.service';
 
 const prismaClient = new PrismaClient();
@@ -140,6 +140,18 @@ export class AuthService {
     if (!user.hashedPassword) {
       console.error('No hashed password found for user');
       throw new Error('Invalid credentials');
+    }
+
+    // Check if the hash is valid
+    if (!isValidBcryptHash(user.hashedPassword)) {
+      console.error('Invalid password hash format');
+      // If the hash is invalid, try to rehash the password
+      const newHash = await hashPassword(password);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { hashedPassword: newHash },
+      });
+      console.log('Password rehashed successfully');
     }
 
     const isValid = await verifyPassword(password, user.hashedPassword);
