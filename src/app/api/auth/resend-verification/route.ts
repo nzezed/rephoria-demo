@@ -36,6 +36,7 @@ export async function POST(request: Request) {
 
     // Generate new verification token
     const verificationToken = generateVerificationToken();
+    const verifyLink = `${process.env.NEXTAUTH_URL}/auth/verify?token=${verificationToken}`;
     
     // Update user with new token
     await prisma.user.update({
@@ -43,31 +44,13 @@ export async function POST(request: Request) {
       data: { verificationToken },
     });
 
-    try {
-      // Send verification email
-      await EmailService.sendVerificationEmail(
-        user.email,
-        verificationToken,
-        user.name || undefined
-      );
+    // Log the verification link instead of sending email
+    console.log('Verification link:', verifyLink);
 
-      return NextResponse.json({
-        message: 'Verification email sent successfully',
-      });
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      
-      // Revert the token update if email fails
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { verificationToken: null },
-      });
-
-      return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again later.' },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      message: 'Verification link generated successfully',
+      verifyLink, // Include the link in the response for testing
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -85,7 +68,7 @@ export async function POST(request: Request) {
 
     console.error('Resend verification error:', error);
     return NextResponse.json(
-      { error: 'Failed to resend verification email' },
+      { error: 'Failed to generate verification link' },
       { status: 500 }
     );
   }
