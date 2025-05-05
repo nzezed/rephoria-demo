@@ -15,12 +15,49 @@ export default function SignupPage() {
     plan: 'solo',
     numReps: 1,
   });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the form data to your backend
-    // For now, we'll just move to the next step
-    setStep(2);
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors) {
+          // Handle validation errors
+          const errorMessage = data.errors.map((err: any) => err.message).join(', ');
+          setError(errorMessage);
+        } else {
+          setError(data.message || 'Signup failed');
+        }
+        return;
+      }
+
+      setSuccess('Signup successful! Redirecting to dashboard...');
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 2000);
+    } catch (error) {
+      console.error('Signup error:', error);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
