@@ -3,6 +3,7 @@ import { AuthService } from '@/lib/auth/auth.service';
 import { z } from 'zod';
 import { generateToken } from '@/lib/token';
 import { prisma } from '@/lib/prisma';
+import { signIn } from 'next-auth/react';
 
 export const runtime = 'nodejs';
 
@@ -39,6 +40,17 @@ export async function POST(request: Request) {
     });
     console.log('User authenticated successfully');
 
+    // Create session
+    const session = await signIn('credentials', {
+      email: data.email,
+      password: data.password,
+      redirect: false,
+    });
+
+    if (!session?.ok) {
+      throw new Error('Failed to create session');
+    }
+
     // --- Audit Log Entry ---
     try {
       await prisma.auditLog.create({
@@ -53,7 +65,10 @@ export async function POST(request: Request) {
     }
     // --- End Audit Log ---
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      session,
+    });
   } catch (error) {
     console.error('Login error:', error);
     

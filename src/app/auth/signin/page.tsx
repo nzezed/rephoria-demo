@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getCookie, setCookie } from 'cookies-next';
 import { generateToken } from '@/lib/token';
+import { signIn } from 'next-auth/react';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -63,31 +64,23 @@ export default function SignInPage() {
         throw new Error('Please refresh the page and try again');
       }
 
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken,
-        },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          csrfToken 
-        }),
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        if (data.error === 'Please verify your email before logging in') {
+
+      if (result?.error) {
+        if (result.error === 'Please verify your email before logging in') {
           setShowResendVerification(true);
         }
-        throw new Error(data.error);
+        throw new Error(result.error);
       }
-      
-      // Redirect to dashboard on success
-      router.push('/dashboard');
-      router.refresh();
+
+      if (result?.ok) {
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to login');
     } finally {
