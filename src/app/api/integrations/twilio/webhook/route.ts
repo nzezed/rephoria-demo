@@ -33,7 +33,8 @@ async function validateTwilioRequest(webhookUrl: string, params: any, twilioSign
     const integration = await prisma.integration.findFirst({
       where: {
         provider: 'twilio',
-        status: 'connected'
+        status: 'connected',
+        organizationId: params.organizationId
       }
     });
 

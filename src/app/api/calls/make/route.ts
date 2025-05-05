@@ -27,12 +27,24 @@ export async function POST(request: Request) {
     })
 
     if (!integration?.config) {
-      return NextResponse.json({ error: 'No active Twilio integration found' }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'No active Twilio integration found. Please check your integration settings.' 
+      }, { status: 404 })
     }
 
     const config = integration.config as any
-    if (!config.accountSid || !config.authToken || !config.phoneNumber) {
-      return NextResponse.json({ error: 'Invalid Twilio configuration' }, { status: 400 })
+    if (!config.accountSid || !config.authToken) {
+      return NextResponse.json({ 
+        error: 'Invalid Twilio configuration. Please check your integration settings.' 
+      }, { status: 400 })
+    }
+
+    // Get the Twilio phone number from the integration config
+    const phoneNumber = config.phoneNumber || config.fromNumber
+    if (!phoneNumber) {
+      return NextResponse.json({ 
+        error: 'No Twilio phone number configured. Please check your integration settings.' 
+      }, { status: 400 })
     }
 
     // Initialize Twilio client
@@ -41,9 +53,9 @@ export async function POST(request: Request) {
     // Make the call
     const call = await client.calls.create({
       to,
-      from: config.phoneNumber,
-      url: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/twilio/webhook`, // Webhook URL for call status updates
-      statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/twilio/webhook`, // Webhook URL for call status updates
+      from: phoneNumber,
+      url: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/twilio/webhook?organizationId=${session.user.organizationId}`,
+      statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/twilio/webhook?organizationId=${session.user.organizationId}`,
       record: true, // Record the call
     })
 
@@ -53,6 +65,8 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Error making call:', error)
-    return NextResponse.json({ error: 'Failed to make call' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Failed to make call. Please check your Twilio configuration and try again.' 
+    }, { status: 500 })
   }
 } 

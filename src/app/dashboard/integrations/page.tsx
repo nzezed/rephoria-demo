@@ -23,6 +23,7 @@ import {
 import { useIntegrationStore } from '@/services/integration-manager'
 import { integrationManager } from '@/services/integration-manager'
 import type { Integration } from '@/services/integration-manager'
+import { useRouter } from 'next/navigation'
 
 interface IntegrationConfig {
   authToken?: string
@@ -35,6 +36,8 @@ export default function IntegrationsPage() {
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null)
   const [config, setConfig] = useState<IntegrationConfig>({})
   const { activeIntegrations, addOrUpdateIntegration } = useIntegrationStore()
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   // Initialize available integrations
   useEffect(() => {
@@ -49,6 +52,22 @@ export default function IntegrationsPage() {
       addOrUpdateIntegration(twilioIntegration)
     }
   }, [activeIntegrations, addOrUpdateIntegration])
+
+  useEffect(() => {
+    fetchIntegrations()
+  }, [])
+
+  const fetchIntegrations = async () => {
+    try {
+      const response = await fetch('/api/integrations')
+      const data = await response.json()
+      setIntegrations(data)
+    } catch (error) {
+      console.error('Error fetching integrations:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleConnect = async (integrationId: string) => {
     const integration = activeIntegrations.find((i) => i.id === integrationId)
@@ -110,10 +129,10 @@ export default function IntegrationsPage() {
     switch (status) {
       case 'connected':
         return 'green'
-      case 'pending':
-        return 'yellow'
-      default:
+      case 'disconnected':
         return 'red'
+      default:
+        return 'gray'
     }
   }
 
@@ -223,120 +242,45 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <main className="space-y-6">
-      <div className="space-y-2">
+    <main className="p-4 md:p-10 mx-auto max-w-7xl">
+      <div className="flex items-center justify-between mb-8">
         <Title>Integrations</Title>
-        <Text>Connect Rephoria with your existing call center platforms and CRM systems.</Text>
+        <Button onClick={() => router.push('/dashboard/integrations/new')}>
+          Add New Integration
+        </Button>
       </div>
 
-      {/* Call Platforms */}
-      <Card>
-        <Title>Call Center Platforms</Title>
-        <Text>Connect your call platform to enable real-time call analysis and insights.</Text>
-        
-        <Grid numItemsMd={3} className="gap-6 mt-6">
-          {activeIntegrations
-            .filter(integration => integration.type === 'call_platform')
-            .map(integration => (
-              <Card key={integration.id} decoration="left" decorationColor={getStatusColor(integration.status)}>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <PhoneIcon className="h-5 w-5 text-gray-500" />
-                      <Title>{integration.name}</Title>
-                    </div>
-                    {getStatusIcon(integration.status)}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Badge color={getStatusColor(integration.status)}>
-                      {integration.status}
-                    </Badge>
-                    {integration.lastSync && (
-                      <Text className="text-sm">
-                        Last synced: {new Date(integration.lastSync).toLocaleString()}
-                      </Text>
-                    )}
-                  </div>
-
-                  <Button
-                    size="sm"
-                    color={integration.status === 'connected' ? 'red' : 'blue'}
-                    onClick={() => handleConnect(integration.id)}
-                  >
-                    {integration.status === 'connected' ? 'Disconnect' : 'Connect'}
-                  </Button>
-                </div>
-              </Card>
-            ))}
-        </Grid>
-      </Card>
-
-      {/* CRM Systems */}
-      <Card>
-        <Title>CRM Systems</Title>
-        <Text>Connect your CRM to sync customer data and enhance call insights.</Text>
-        
-        <Grid numItemsMd={3} className="gap-6 mt-6">
-          {activeIntegrations
-            .filter(integration => integration.type === 'crm')
-            .map(integration => (
-              <Card key={integration.id} decoration="left" decorationColor={getStatusColor(integration.status)}>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <CloudArrowUpIcon className="h-5 w-5 text-gray-500" />
-                      <Title>{integration.name}</Title>
-                    </div>
-                    {getStatusIcon(integration.status)}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Badge color={getStatusColor(integration.status)}>
-                      {integration.status}
-                    </Badge>
-                    {integration.lastSync && (
-                      <Text className="text-sm">
-                        Last synced: {new Date(integration.lastSync).toLocaleString()}
-                      </Text>
-                    )}
-                  </div>
-
-                  <Button
-                    size="sm"
-                    color={integration.status === 'connected' ? 'red' : 'blue'}
-                    onClick={() => handleConnect(integration.id)}
-                  >
-                    {integration.status === 'connected' ? 'Disconnect' : 'Connect'}
-                  </Button>
-                </div>
-              </Card>
-            ))}
-        </Grid>
-      </Card>
-
-      {/* Configuration Modal */}
-      {activeIntegration && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <Card className="w-full max-w-lg">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Title>Configure {activeIntegrations.find(i => i.id === activeIntegration)?.name}</Title>
-                <Text>Enter your credentials to connect the platform.</Text>
+      {loading ? (
+        <Text>Loading integrations...</Text>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {integrations.map((integration: any) => (
+            <Card key={integration.id} className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <Title>{integration.name}</Title>
+                <Badge color={getStatusColor(integration.status)}>
+                  {integration.status}
+                </Badge>
               </div>
-
-              <div className="space-y-4">
-                {renderConfigFields(activeIntegration)}
-              </div>
-
-              <Flex className="space-x-2 justify-end">
-                <Button variant="secondary" onClick={() => setActiveIntegration(null)}>
-                  Cancel
+              <Text className="mb-4">{integration.description || 'No description available'}</Text>
+              <div className="flex justify-between items-center">
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(`/dashboard/integrations/${integration.provider}`)}
+                >
+                  Configure
                 </Button>
-                <Button onClick={handleSaveConfig}>Save Configuration</Button>
-              </Flex>
-            </div>
-          </Card>
+                {integration.status === 'connected' && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => router.push(`/dashboard/integrations/${integration.provider}/disconnect`)}
+                  >
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </main>
