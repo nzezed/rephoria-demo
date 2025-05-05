@@ -1,64 +1,258 @@
-import { Card } from '@tremor/react'
-import Link from 'next/link'
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowRight, Check, Play } from 'lucide-react';
 
 export default function Home() {
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <div className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          <code className="font-mono font-bold">Rephoria AI Demo</code>
-        </div>
-      </div>
-
-      <div className="relative flex flex-col place-items-center space-y-8">
-        <h1 className="text-6xl font-bold text-center bg-gradient-to-r from-rephoria-600 to-rephoria-400 text-transparent bg-clip-text">
-          Transform Your Call Center with AI
-        </h1>
-        <Link
-          href="/auth/register"
-          className="px-8 py-3 text-lg font-semibold text-white bg-rephoria-600 rounded-full hover:bg-rephoria-700 transition-colors"
+    <div className="min-h-screen bg-black text-white">
+      {/* Hero Section */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black z-10" />
+        <video
+          autoPlay
+          loop
+          muted
+          className="absolute inset-0 w-full h-full object-cover"
         >
-          Get Started
-        </Link>
-      </div>
+          <source src="/hero-bg.mp4" type="video/mp4" />
+        </video>
+        <div className="relative z-20 text-center px-4 max-w-4xl mx-auto">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-5xl md:text-7xl font-bold mb-6"
+          >
+            Transform Your Call Center with AI
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl md:text-2xl text-gray-300 mb-8"
+          >
+            Rephoria: Your AI-powered sales performance optimizer
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <Link 
+              href="/demo" 
+              className="bg-[#ff4f58] hover:bg-[#ff4f58]/90 text-white px-8 py-4 rounded-lg text-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              Let's Talk <ArrowRight className="w-5 h-5" />
+            </Link>
+            <button 
+              onClick={() => setIsVideoOpen(true)}
+              className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-lg text-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              Watch Demo <Play className="w-5 h-5" />
+            </button>
+          </motion.div>
+        </div>
+      </section>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-3 lg:text-left">
-        <Card className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Real-Time Transcription{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Instantly convert calls to text with our advanced AI technology.
-          </p>
-        </Card>
+      {/* Features Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-16">Why Rephoria?</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="bg-white/5 p-8 rounded-xl"
+            >
+              <h3 className="text-2xl font-semibold mb-4">Performance Analytics</h3>
+              <p className="text-gray-300">
+                Reduce time spent analyzing performance. Get instant insights into agent performance and actionable improvements.
+              </p>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-white/5 p-8 rounded-xl"
+            >
+              <h3 className="text-2xl font-semibold mb-4">AI-Powered Follow-ups</h3>
+              <p className="text-gray-300">
+                Perfect call summaries and high-probability openings generated by AI for every follow-up call.
+              </p>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="bg-white/5 p-8 rounded-xl"
+            >
+              <h3 className="text-2xl font-semibold mb-4">Script Omega</h3>
+              <p className="text-gray-300">
+                AI continuously learns from your successful calls to optimize scripts, openings, and closings.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
-        <Card className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Smart Analytics{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Get deep insights into call performance and customer satisfaction.
-          </p>
-        </Card>
+      {/* Pricing Section */}
+      <section className="py-20 px-4 bg-white/5">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-16">Simple, Transparent Pricing</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="bg-white/5 p-8 rounded-xl"
+            >
+              <h3 className="text-2xl font-semibold mb-4">Solo</h3>
+              <p className="text-4xl font-bold mb-4">$49<span className="text-lg text-gray-400">/mo/user</span></p>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>1 Rep</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Basic Analytics</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>AI Follow-ups</span>
+                </li>
+              </ul>
+              <Link 
+                href="/signup" 
+                className="block w-full bg-[#ff4f58] hover:bg-[#ff4f58]/90 text-white px-6 py-3 rounded-lg text-center font-semibold transition-colors"
+              >
+                Get Started
+              </Link>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-white/5 p-8 rounded-xl border-2 border-[#ff4f58]"
+            >
+              <div className="absolute top-0 right-0 bg-[#ff4f58] text-white px-4 py-1 rounded-tr-xl">
+                Popular
+              </div>
+              <h3 className="text-2xl font-semibold mb-4">Scale</h3>
+              <p className="text-4xl font-bold mb-4">$41<span className="text-lg text-gray-400">/mo/user</span></p>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>2-8 Reps</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Advanced Analytics</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Script Omega</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Team Leaderboards</span>
+                </li>
+              </ul>
+              <Link 
+                href="/signup" 
+                className="block w-full bg-[#ff4f58] hover:bg-[#ff4f58]/90 text-white px-6 py-3 rounded-lg text-center font-semibold transition-colors"
+              >
+                Get Started
+              </Link>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="bg-white/5 p-8 rounded-xl"
+            >
+              <h3 className="text-2xl font-semibold mb-4">Enterprise</h3>
+              <p className="text-4xl font-bold mb-4">$30<span className="text-lg text-gray-400">/mo/user</span></p>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>8+ Reps</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Custom Analytics</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Priority Support</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-[#ff4f58]" />
+                  <span>Custom Integrations</span>
+                </li>
+              </ul>
+              <Link 
+                href="/contact" 
+                className="block w-full bg-[#ff4f58] hover:bg-[#ff4f58]/90 text-white px-6 py-3 rounded-lg text-center font-semibold transition-colors"
+              >
+                Contact Sales
+              </Link>
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
-        <Card className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <h2 className="mb-3 text-2xl font-semibold">
-            Agent Performance{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Track and improve agent performance with AI-powered insights.
+      {/* CTA Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl font-bold mb-8">Ready to Transform Your Call Center?</h2>
+          <p className="text-xl text-gray-300 mb-8">
+            Join the future of sales optimization with Rephoria's AI-powered platform.
           </p>
-        </Card>
-      </div>
-    </main>
-  )
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/demo" 
+              className="bg-[#ff4f58] hover:bg-[#ff4f58]/90 text-white px-8 py-4 rounded-lg text-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              Let's Talk <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link 
+              href="/signup" 
+              className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-lg text-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              Start Free Trial
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Modal */}
+      {isVideoOpen && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+          <button 
+            onClick={() => setIsVideoOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+          >
+            Close
+          </button>
+          <div className="w-full max-w-4xl aspect-video">
+            <iframe 
+              className="w-full h-full"
+              src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+              title="Rephoria Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
