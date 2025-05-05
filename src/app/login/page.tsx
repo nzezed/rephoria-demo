@@ -1,75 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { z } from 'zod';
-import { generateToken } from '@/lib/token';
-import { setCookie, getCookie } from 'cookies-next';
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  csrfToken: z.string(),
-});
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [csrfToken, setCsrfToken] = useState('');
-
-  useEffect(() => {
-    // Generate and set CSRF token when page loads
-    const token = getCookie('csrf_token');
-    if (!token) {
-      const newToken = generateToken();
-      setCookie('csrf_token', newToken, {
-        maxAge: 60 * 60, // 1 hour
-        path: '/',
-      });
-      setCsrfToken(newToken);
-    } else {
-      setCsrfToken(token as string);
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      if (!csrfToken) {
-        throw new Error('Please refresh the page and try again');
-      }
-
-      const data = loginSchema.parse({ email, password, csrfToken });
-      
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken,
-        },
-        body: JSON.stringify(data),
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to login');
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      const result = await response.json();
-      
-      // Store the JWT token
-      localStorage.setItem('token', result.token);
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
+      if (result?.ok) {
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        setError('Invalid email or password format');
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('An unexpected error occurred');
@@ -86,7 +47,6 @@ export default function LoginPage() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <input type="hidden" name="csrfToken" value={csrfToken} />
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">Email address</label>
