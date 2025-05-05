@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 export function EmailVerificationForm() {
   const [isVerifying, setIsVerifying] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const { login } = useAuth();
 
   useEffect(() => {
     async function verifyEmail() {
@@ -33,12 +35,19 @@ export function EmailVerificationForm() {
           throw new Error('Failed to verify email');
         }
 
+        const data = await response.json();
+        
+        // Store the token
+        if (data.token) {
+          await login(data.token);
+        }
+
         toast({
           title: 'Success',
-          description: 'Your email has been verified. You can now log in.',
+          description: 'Your email has been verified. You are now logged in.',
         });
 
-        router.push('/auth/login');
+        router.push('/dashboard');
       } catch (error) {
         toast({
           title: 'Error',
@@ -52,7 +61,7 @@ export function EmailVerificationForm() {
     }
 
     verifyEmail();
-  }, [token, router]);
+  }, [token, router, login]);
 
   if (isVerifying) {
     return (

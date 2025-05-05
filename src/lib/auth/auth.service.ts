@@ -17,7 +17,7 @@ export interface CreateUserInput {
 
 export interface AuthResult {
   user: User;
-  token: string;
+  token: string | null;
 }
 
 export interface RegisterInput {
@@ -94,32 +94,23 @@ export class AuthService {
       // Don't fail registration if email fails
     }
 
-    // Generate JWT token
-    const token = generateJWT({
-      userId: user.id,
-      organizationId: organization.id,
-      role: user.role,
-    });
-
-    return { user, token };
+    // Return user without token since email is not verified
+    return { user, token: null };
   }
 
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Find user with all fields
-    const user = await prismaClient.user.findUnique({
-      where: { email: credentials.email },
+    const { email, password } = credentials;
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
       include: {
-        organization: true
-      }
+        organization: true,
+      },
     });
 
     if (!user) {
       throw new Error('Invalid credentials');
-    }
-
-    // Check if user is active
-    if (!user.isActive) {
-      throw new Error('Account is disabled');
     }
 
     // Check if email is verified
@@ -128,38 +119,23 @@ export class AuthService {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(credentials.password, user.hashedPassword);
-    if (!isValidPassword) {
+    const isValid = await verifyPassword(password, user.hashedPassword);
+    if (!isValid) {
       throw new Error('Invalid credentials');
     }
 
-    // Generate token
-    const token = this.generateToken(user);
+    // Generate JWT token
+    const token = generateJWT({
+      userId: user.id,
+      organizationId: user.organizationId,
+      role: user.role,
+    });
 
     // Create session
     await this.createSession(user.id, token);
 
-    // Update last login
-    await prismaClient.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
-
-    const authUser: AuthUser = {
-      id: user.id,
-      email: user.email,
-      name: user.name || undefined,
-      role: user.role,
-      organizationId: user.organizationId,
-      organizationSubdomain: user.organization.subdomain,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      lastLoginAt: user.lastLoginAt || undefined,
-    };
-
     return {
-      user: authUser,
+      user: this.sanitizeUser(user),
       token,
     };
   }

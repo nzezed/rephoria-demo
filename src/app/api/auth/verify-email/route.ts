@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth/auth.service';
 import { z } from 'zod';
+import { generateJWT } from '@/lib/auth/utils';
 
 export const runtime = 'nodejs';
 
@@ -13,10 +14,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = verifyEmailSchema.parse(body);
 
-    await AuthService.verifyEmail(data.token);
+    const user = await AuthService.verifyEmail(data.token);
+
+    // Generate JWT token after successful verification
+    const token = generateJWT({
+      userId: user.id,
+      organizationId: user.organizationId,
+      role: user.role,
+    });
 
     return NextResponse.json({
       message: 'Email verified successfully',
+      token,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
