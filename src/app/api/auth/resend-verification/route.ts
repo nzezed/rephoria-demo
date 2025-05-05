@@ -43,16 +43,31 @@ export async function POST(request: Request) {
       data: { verificationToken },
     });
 
-    // Send verification email
-    await EmailService.sendVerificationEmail(
-      user.email,
-      verificationToken,
-      user.name || undefined
-    );
+    try {
+      // Send verification email
+      await EmailService.sendVerificationEmail(
+        user.email,
+        verificationToken,
+        user.name || undefined
+      );
 
-    return NextResponse.json({
-      message: 'Verification email sent successfully',
-    });
+      return NextResponse.json({
+        message: 'Verification email sent successfully',
+      });
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      
+      // Revert the token update if email fails
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { verificationToken: null },
+      });
+
+      return NextResponse.json(
+        { error: 'Failed to send verification email. Please try again later.' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
