@@ -100,6 +100,7 @@ export class AuthService {
 
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const { email, password } = credentials;
+    console.log('AuthService login attempt for email:', email);
 
     // Find user by email
     const user = await prisma.user.findUnique({
@@ -110,11 +111,15 @@ export class AuthService {
     });
 
     if (!user) {
+      console.error('User not found for email:', email);
       throw new Error('Invalid credentials');
     }
 
+    console.log('User found:', { id: user.id, email: user.email, emailVerified: user.emailVerified });
+
     // For existing users without email verification, mark them as verified
     if (!user.emailVerified) {
+      console.log('User not verified, marking as verified');
       await prisma.user.update({
         where: { id: user.id },
         data: { emailVerified: new Date() },
@@ -123,20 +128,27 @@ export class AuthService {
     }
 
     // Verify password
+    console.log('Verifying password...');
     const isValid = await verifyPassword(password, user.hashedPassword);
     if (!isValid) {
+      console.error('Invalid password for user:', email);
       throw new Error('Invalid credentials');
     }
+    console.log('Password verified successfully');
 
     // Generate JWT token
+    console.log('Generating JWT token...');
     const token = generateJWT({
       userId: user.id,
       organizationId: user.organizationId,
       role: user.role,
     });
+    console.log('JWT token generated');
 
     // Create session
+    console.log('Creating session...');
     await this.createSession(user.id, token);
+    console.log('Session created successfully');
 
     return {
       user: this.sanitizeUser(user),
