@@ -12,6 +12,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [showResendVerification, setShowResendVerification] = useState(false);
+  const [verificationLink, setVerificationLink] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,12 +31,14 @@ export function LoginForm() {
         body: JSON.stringify({ email }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to resend verification email');
+        throw new Error(data.error || 'Failed to resend verification email');
       }
 
-      setError('Verification email sent. Please check your inbox.');
+      setVerificationLink(data.verifyLink);
+      setError('Verification link generated. Click the link below to verify your email.');
       setShowResendVerification(false);
     } catch (err: any) {
       setError(err.message || 'Failed to resend verification email');
@@ -103,6 +106,18 @@ export function LoginForm() {
               >
                 Resend verification email
               </button>
+            )}
+            {verificationLink && (
+              <div className="mt-2">
+                <a
+                  href={verificationLink}
+                  className="text-blue-400 hover:text-blue-300 underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Click here to verify your email
+                </a>
+              </div>
             )}
           </div>
         )}
