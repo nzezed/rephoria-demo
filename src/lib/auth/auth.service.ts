@@ -99,88 +99,82 @@ export class AuthService {
   }
 
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const { email, password } = credentials;
-    console.log('AuthService login attempt for email:', email);
-
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        organization: true,
-      },
-    });
-
-    if (!user) {
-      console.error('User not found for email:', email);
-      throw new Error('Invalid credentials');
-    }
-
-    console.log('User found:', { 
-      id: user.id, 
-      email: user.email, 
-      emailVerified: user.emailVerified,
-      hashedPassword: user.hashedPassword ? 'exists' : 'missing'
-    });
-
-    // For existing users without email verification, mark them as verified
-    if (!user.emailVerified) {
-      console.log('User not verified, marking as verified');
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerified: new Date() },
+    try {
+      console.log('AuthService login attempt for email:', credentials.email);
+      
+      const user = await prisma.user.findUnique({
+        where: { email: credentials.email },
+        include: {
+          organization: true,
+        },
       });
-      user.emailVerified = new Date();
-    }
 
-    // Verify password
-    console.log('Verifying password...');
-    console.log('Input password length:', password.length);
-    console.log('Hashed password exists:', !!user.hashedPassword);
-    
-    if (!user.hashedPassword) {
-      console.error('No hashed password found for user');
-      throw new Error('Invalid credentials');
-    }
+      if (!user) {
+        console.error('User not found');
+        throw new Error('Invalid credentials');
+      }
 
-    // Check if the hash is valid
-    if (!isValidBcryptHash(user.hashedPassword)) {
-      console.error('Invalid password hash format');
-      // If the hash is invalid, try to rehash the password
-      const newHash = await hashPassword(password);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { hashedPassword: newHash },
+      console.log('User found:', {
+        id: user.id,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        hashedPassword: user.hashedPassword ? 'exists' : 'missing'
       });
-      console.log('Password rehashed successfully');
+
+      if (!user.hashedPassword) {
+        console.error('User has no password set');
+        throw new Error('Invalid credentials');
+      }
+
+      console.log('Verifying password...');
+      console.log('Input password length:', credentials.password.length);
+      console.log('Hashed password exists:', !!user.hashedPassword);
+
+      const isValid = await verifyPassword(credentials.password, user.hashedPassword);
+      console.log('Password verification result:', isValid);
+
+      if (!isValid) {
+        // If password is valid but not bcrypt hashed, rehash it
+        if (credentials.password === user.hashedPassword) {
+          console.log('Password matches but needs rehashing');
+          const newHash = await hashPassword(credentials.password);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { hashedPassword: newHash }
+          });
+          console.log('Password rehashed successfully');
+        } else {
+          console.error('Invalid password for user:', user.email);
+          throw new Error('Invalid credentials');
+        }
+      }
+
+      const token = generateJWT({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        organizationId: user.organizationId,
+      });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name || undefined,
+          role: user.role,
+          organizationId: user.organizationId,
+          organizationSubdomain: user.organization?.subdomain || '',
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          lastLoginAt: user.lastLoginAt || undefined,
+        },
+        token,
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-
-    const isValid = await verifyPassword(password, user.hashedPassword);
-    console.log('Password verification result:', isValid);
-    
-    if (!isValid) {
-      console.error('Invalid password for user:', email);
-      throw new Error('Invalid credentials');
-    }
-    console.log('Password verified successfully');
-
-    // Generate JWT token
-    console.log('Generating JWT token...');
-    const token = generateJWT({
-      userId: user.id,
-      organizationId: user.organizationId,
-      role: user.role,
-    });
-    console.log('JWT token generated');
-
-    // Create session
-    console.log('Creating session...');
-    await this.createSession(user.id, token);
-    console.log('Session created successfully');
-
-    return {
-      user: this.sanitizeUser(user),
-      token,
-    };
   }
 
   static async validateToken(token: string): Promise<JWTPayload> {

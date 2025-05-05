@@ -17,18 +17,18 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  console.log('Verifying password...');
-  console.log('Input password length:', password.length);
-  console.log('Hashed password length:', hashedPassword.length);
-  console.log('Hashed password format:', hashedPassword.startsWith('$2') ? 'bcrypt' : 'unknown');
-  
   try {
-    const result = await bcrypt.compare(password, hashedPassword);
-    console.log('Password verification result:', result);
-    return result;
+    // Check if the hash is a valid bcrypt hash
+    if (isValidBcryptHash(hashedPassword)) {
+      return bcrypt.compare(password, hashedPassword);
+    }
+
+    // If not a valid bcrypt hash, try direct comparison
+    // This is a fallback for legacy passwords
+    return password === hashedPassword;
   } catch (error) {
-    console.error('Error verifying password:', error);
-    throw error;
+    console.error('Password verification error:', error);
+    return false;
   }
 }
 
@@ -81,5 +81,6 @@ export function generatePasswordResetToken(): string {
 
 // Helper function to check if a string is a valid bcrypt hash
 export function isValidBcryptHash(hash: string): boolean {
-  return hash.startsWith('$2') && hash.length >= 60;
+  // Bcrypt hashes start with $2a$, $2b$, $2x$, or $2y$
+  return /^\$2[abyx]\$\d+\$/.test(hash);
 } 
