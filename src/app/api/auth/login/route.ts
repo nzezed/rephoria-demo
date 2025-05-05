@@ -28,10 +28,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await AuthService.validateCredentials(
-      data.email,
-      data.password
-    );
+    const result = await AuthService.login({
+      email: data.email,
+      password: data.password,
+    });
 
     // --- Audit Log Entry ---
     try {
