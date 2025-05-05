@@ -2,6 +2,7 @@
 
 import { Card, Title, Text, Button, TextInput, Badge } from '@tremor/react';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 export default function TwilioIntegration() {
   const [step, setStep] = useState(1);
@@ -13,16 +14,22 @@ export default function TwilioIntegration() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'disconnected' | 'connected'>('disconnected');
   const [webhookUrl, setWebhookUrl] = useState('');
+  const { data: session } = useSession();
 
   // Generate webhook URL when component mounts
   useEffect(() => {
-    const baseUrl = window.location.origin;
-    // Get organization ID from the URL or session
-    const organizationId = window.location.pathname.split('/')[2]; // Assuming URL is /dashboard/[orgId]/integrations/twilio
-    setWebhookUrl(`${baseUrl}/api/integrations/twilio/webhook?organizationId=${organizationId}`);
-  }, []);
+    if (session?.user?.organizationId) {
+      const baseUrl = window.location.origin;
+      setWebhookUrl(`${baseUrl}/api/integrations/twilio/webhook?organizationId=${session.user.organizationId}`);
+    }
+  }, [session]);
 
   const handleConnect = async () => {
+    if (!session?.user?.organizationId) {
+      console.error('No organization ID found');
+      return;
+    }
+
     setLoading(true);
     try {
       // First, find the existing Twilio integration
@@ -42,7 +49,7 @@ export default function TwilioIntegration() {
               accountSid: credentials.accountSid,
               authToken: credentials.authToken,
               phoneNumber: credentials.phoneNumber,
-              webhookUrl: webhookUrl // Add webhook URL to config
+              webhookUrl: webhookUrl
             },
             lastSync: new Date(),
           }),
@@ -58,11 +65,12 @@ export default function TwilioIntegration() {
             provider: 'twilio',
             name: 'Twilio',
             type: 'call_platform',
+            organizationId: session.user.organizationId,
             config: {
               accountSid: credentials.accountSid,
               authToken: credentials.authToken,
               phoneNumber: credentials.phoneNumber,
-              webhookUrl: webhookUrl // Add webhook URL to config
+              webhookUrl: webhookUrl
             },
             status: 'connected',
           }),
