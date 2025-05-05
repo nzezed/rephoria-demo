@@ -25,22 +25,31 @@ export function LoginForm() {
 
   const handleResendVerification = async () => {
     try {
+      console.log('Attempting to resend verification for:', email);
       const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to resend verification email');
+      }
+
+      if (!data.verifyLink) {
+        console.error('No verification link in response:', data);
+        throw new Error('No verification link received');
       }
 
       setVerificationLink(data.verifyLink);
       setError('Verification link generated. Click the link below to verify your email.');
       setShowResendVerification(false);
     } catch (err: any) {
+      console.error('Error in handleResendVerification:', err);
       setError(err.message || 'Failed to resend verification email');
     }
   };
