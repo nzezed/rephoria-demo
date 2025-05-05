@@ -64,29 +64,37 @@ export class EmailService {
     html: string;
   }) {
     if (!process.env.RESEND_API_KEY) {
-      console.error('Resend API key is missing');
+      console.error('Resend API key is missing. Please check your environment variables.');
+      throw new Error('Email service is not configured properly. Please check your environment variables.');
+    }
+
+    if (!process.env.NEXTAUTH_URL) {
+      console.error('NEXTAUTH_URL is missing. Please check your environment variables.');
       throw new Error('Email service is not configured properly. Please check your environment variables.');
     }
 
     try {
       console.log('Attempting to send email to:', to);
+      console.log('Using NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+      console.log('Using Resend API key:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
+      
       const { data, error } = await resend.emails.send({
-        from: 'Rephoria <onboarding@resend.dev>',
+        from: 'Rephoria <noreply@rephoria.com>',
         to,
         subject,
         html,
       });
 
       if (error) {
-        console.error('Failed to send email:', error);
-        throw new Error('Failed to send email. Please try again later.');
+        console.error('Failed to send email. Resend error:', error);
+        throw new Error(`Failed to send email: ${error.message}`);
       }
 
       console.log('Email sent successfully:', data);
       return data;
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      throw new Error('Failed to send email. Please try again later.');
+    } catch (error: any) {
+      console.error('Failed to send email. Error details:', error);
+      throw new Error(`Failed to send email: ${error.message || 'Unknown error'}`);
     }
   }
 } 
