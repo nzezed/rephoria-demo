@@ -38,6 +38,7 @@ export default function IntegrationsPage() {
   const { activeIntegrations, addOrUpdateIntegration } = useIntegrationStore()
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const [integrations, setIntegrations] = useState([]);
 
   // Initialize available integrations
   useEffect(() => {
@@ -272,7 +273,7 @@ export default function IntegrationsPage() {
                 </Button>
                 {integration.status === 'connected' && (
                   <Button
-                    variant="destructive"
+                    color="red"
                     onClick={() => router.push(`/dashboard/integrations/${integration.provider}/disconnect`)}
                   >
                     Disconnect
