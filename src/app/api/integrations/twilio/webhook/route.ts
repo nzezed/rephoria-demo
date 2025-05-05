@@ -70,9 +70,15 @@ export async function POST(request: NextRequest) {
   const params = await request.json()
   const twilioSignature = request.headers.get('X-Twilio-Signature')
   const webhookUrl = request.url
+  const { searchParams } = new URL(request.url)
+  const organizationId = searchParams.get('organizationId')
+
+  if (!organizationId) {
+    return new Response('Organization ID is required', { status: 400 })
+  }
 
   // Validate the request is from Twilio
-  const isValid = await validateTwilioRequest(webhookUrl, params, twilioSignature)
+  const isValid = await validateTwilioRequest(webhookUrl, { organizationId }, twilioSignature)
   if (!isValid) {
     return new Response('Invalid signature', { status: 403 })
   }
@@ -99,11 +105,9 @@ export async function POST(request: NextRequest) {
         twilioCallSid: callSid,
         status: callStatus,
         startTime: new Date(),
-        // You'll need to set the organizationId. For now, let's find the first organization
-        // In production, you should determine this based on the Twilio number or other context
         organization: {
           connect: {
-            id: (await prisma.organization.findFirst())?.id
+            id: organizationId
           }
         }
       }
