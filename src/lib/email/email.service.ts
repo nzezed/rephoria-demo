@@ -79,7 +79,7 @@ export class EmailService {
       console.log('Using Resend API key:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
       
       const { data, error } = await resend.emails.send({
-        from: 'Rephoria <noreply@rephoria.com>',
+        from: 'Rephoria <onboarding@resend.dev>',
         to,
         subject,
         html,
