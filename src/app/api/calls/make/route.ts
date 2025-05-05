@@ -47,6 +47,14 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
+    // Get the webhook URL from the integration config
+    const webhookUrl = config.webhookUrl
+    if (!webhookUrl) {
+      return NextResponse.json({ 
+        error: 'No webhook URL configured. Please check your integration settings.' 
+      }, { status: 400 })
+    }
+
     // Initialize Twilio client
     const client = twilio(config.accountSid, config.authToken)
 
@@ -54,8 +62,8 @@ export async function POST(request: Request) {
     const call = await client.calls.create({
       to,
       from: phoneNumber,
-      url: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/twilio/webhook?organizationId=${session.user.organizationId}`,
-      statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/twilio/webhook?organizationId=${session.user.organizationId}`,
+      url: webhookUrl,
+      statusCallback: webhookUrl,
       record: true, // Record the call
     })
 

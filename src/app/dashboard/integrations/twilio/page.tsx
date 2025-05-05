@@ -17,7 +17,9 @@ export default function TwilioIntegration() {
   // Generate webhook URL when component mounts
   useEffect(() => {
     const baseUrl = window.location.origin;
-    setWebhookUrl(`${baseUrl}/api/integrations/twilio/webhook`);
+    // Get organization ID from the URL or session
+    const organizationId = window.location.pathname.split('/')[2]; // Assuming URL is /dashboard/[orgId]/integrations/twilio
+    setWebhookUrl(`${baseUrl}/api/integrations/twilio/webhook?organizationId=${organizationId}`);
   }, []);
 
   const handleConnect = async () => {
@@ -40,6 +42,7 @@ export default function TwilioIntegration() {
               accountSid: credentials.accountSid,
               authToken: credentials.authToken,
               phoneNumber: credentials.phoneNumber,
+              webhookUrl: webhookUrl // Add webhook URL to config
             },
             lastSync: new Date(),
           }),
@@ -59,6 +62,7 @@ export default function TwilioIntegration() {
               accountSid: credentials.accountSid,
               authToken: credentials.authToken,
               phoneNumber: credentials.phoneNumber,
+              webhookUrl: webhookUrl // Add webhook URL to config
             },
             status: 'connected',
           }),
