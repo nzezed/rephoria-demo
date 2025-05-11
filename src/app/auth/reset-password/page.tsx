@@ -13,9 +13,10 @@ interface ResetPasswordPageProps {
 
 export default function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
   const token = searchParams.token;
+  const email = searchParams.email;
 
-  if (!token || typeof token !== 'string') {
-    redirect('/auth/login');
+  if (!token || typeof token !== 'string' || !email || typeof email !== 'string') {
+    redirect('/auth/signin');
   }
 
   return (
@@ -29,7 +30,7 @@ export default function ResetPasswordPage({ searchParams }: ResetPasswordPagePro
             Enter your new password below.
           </p>
         </div>
-        <ResetPasswordForm token={token} />
+        <ResetPasswordForm token={token} email={email} />
       </div>
     </div>
   );
