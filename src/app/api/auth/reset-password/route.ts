@@ -38,17 +38,7 @@ export async function POST(request: Request) {
     }
 
     // Verify reset token
-    const resetToken = await prisma.passwordResetToken.findFirst({
-      where: {
-        userId: user.id,
-        token: data.token,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-    });
-
-    if (!resetToken) {
+    if (!user.resetToken || !user.resetTokenExpiry || user.resetToken !== data.token || user.resetTokenExpiry < new Date()) {
       console.error('Invalid or expired reset token');
       return NextResponse.json(
         { error: 'Invalid or expired reset token' },
@@ -73,12 +63,11 @@ export async function POST(request: Request) {
     const hashedPassword = await hashPassword(data.newPassword);
     await prisma.user.update({
       where: { id: user.id },
-      data: { hashedPassword },
-    });
-
-    // Delete used reset token
-    await prisma.passwordResetToken.delete({
-      where: { id: resetToken.id },
+      data: { 
+        hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
     });
 
     console.log('Password reset successfully');
