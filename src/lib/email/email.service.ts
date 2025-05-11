@@ -15,7 +15,7 @@ export class EmailService {
     name?: string
   ) {
     console.log('Preparing password reset email for:', to);
-    const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(to)}`;
     const html = await render(PasswordResetEmail({ resetLink, name }));
     console.log('Password reset link generated:', resetLink);
 
