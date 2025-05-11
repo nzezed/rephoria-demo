@@ -27,6 +27,7 @@
     "@react-email/components": "^0.0.36",
     "@react-email/render": "^1.0.6",
     "@sentry/nextjs": "^9.15.0",
+    "@sentry/replay": "^7.116.0",
     "@tremor/react": "^3.14.0",
     "@types/twilio": "^3.19.2",
     "class-variance-authority": "^0.7.1",
