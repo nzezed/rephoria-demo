@@ -30,7 +30,7 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="text-5xl md:text-7xl font-bold mb-6"
           >
-            Transform Your Call Center with AI
+            Welcome to Repload
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -38,7 +38,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-xl md:text-2xl text-gray-300 mb-8"
           >
-            Rephoria: Your AI-powered sales performance optimizer
+            Repload is a powerful platform for managing your digital assets and workflows.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -65,7 +65,13 @@ export default function Home() {
       {/* Features Section */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">Why Rephoria?</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            Why Choose Repload?
+          </h2>
+          <p className="mt-6 text-lg leading-8 text-gray-600">
+            Repload offers a comprehensive suite of features designed to streamline your workflow
+            and enhance productivity.
+          </p>
           <div className="grid md:grid-cols-3 gap-8">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -216,7 +222,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-8">Ready to Transform Your Call Center?</h2>
           <p className="text-xl text-gray-300 mb-8">
-            Join the future of sales optimization with Rephoria's AI-powered platform.
+            Join the future of sales optimization with Repload's AI-powered platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
@@ -248,7 +254,7 @@ export default function Home() {
             <iframe 
               className="w-full h-full"
               src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
-              title="Rephoria Demo"
+              title="Repload Demo"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />

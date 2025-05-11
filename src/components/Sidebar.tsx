@@ -12,6 +12,7 @@ import {
   ArrowPathIcon,
   DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline'
+import Image from 'next/image'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -32,10 +33,19 @@ export default function Sidebar() {
       <div className="flex h-16 shrink-0 items-center px-6">
         <Link href="/dashboard" className="flex items-center space-x-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500 bg-gradient-to-br from-blue-400 to-blue-600">
-            <span className="text-lg font-bold text-white">R</span>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.svg"
+                alt="Repload"
+                width={32}
+                height={32}
+                className="dark:invert"
+              />
+              <span className="text-lg font-bold text-white">R</span>
+            </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-white tracking-tight">Rephoria AI</span>
+            <span className="text-lg font-bold text-white tracking-tight">Repload AI</span>
             <span className="text-xs text-blue-400">Call Center Intelligence</span>
           </div>
         </Link>

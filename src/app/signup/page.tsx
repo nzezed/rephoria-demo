@@ -69,9 +69,11 @@ export default function SignupPage() {
           transition={{ duration: 0.8 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">Start Your Free Trial</h1>
-          <p className="text-xl text-gray-300">
-            Get started with Rephoria and transform your call center today.
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Create your account
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Join Repload and start optimizing your sales performance today.
           </p>
         </motion.div>
 

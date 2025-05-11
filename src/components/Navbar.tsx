@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 export default function Navbar() {
   return (
@@ -9,8 +10,15 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-white">
-              Rephoria
+            <Link href="/" className="flex items-center space-x-2">
+              <Image
+                src="/logo.svg"
+                alt="Repload"
+                width={32}
+                height={32}
+                className="dark:invert"
+              />
+              <span className="text-lg font-semibold">Repload</span>
             </Link>
           </div>
           

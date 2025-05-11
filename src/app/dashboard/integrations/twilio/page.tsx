@@ -102,7 +102,7 @@ export default function TwilioIntegration() {
         <Card className={step !== 1 ? 'opacity-50' : ''}>
           <Title>Step 1: Prepare Your Twilio Account</Title>
           <Text className="mt-2">
-            Before connecting Twilio to Rephoria, make sure you have:
+            Before connecting Twilio to Repload, make sure you have:
           </Text>
           <ul className="list-disc ml-6 mt-2 space-y-2">
             <li>A Twilio account (create one at twilio.com if needed)</li>

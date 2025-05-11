@@ -8,92 +8,101 @@ import {
   Text,
   Button,
   Hr,
+  Heading,
+  Link,
+  Preview,
 } from '@react-email/components';
 
 interface WelcomeEmailProps {
   name?: string;
 }
 
-export function WelcomeEmail({ name }: WelcomeEmailProps) {
+export const WelcomeEmail = ({ name }: WelcomeEmailProps) => {
+  const previewText = `Welcome to Repload!`;
   const dashboardLink = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
 
   return (
     <Html>
       <Head />
+      <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Section>
-            <Text style={heading}>Welcome to Rephoria!</Text>
-            <Text style={paragraph}>
-              {name ? `Hi ${name},` : 'Hello,'}
-            </Text>
-            <Text style={paragraph}>
-              Thank you for joining Rephoria! We're excited to help you manage and
-              analyze your contact center operations more effectively.
-            </Text>
-            <Text style={paragraph}>
-              Here's what you can do with Rephoria:
-            </Text>
-            <ul style={list}>
-              <li style={listItem}>Connect your contact center platforms</li>
-              <li style={listItem}>Monitor real-time metrics and analytics</li>
-              <li style={listItem}>Get AI-powered insights and recommendations</li>
-              <li style={listItem}>Track agent performance and customer satisfaction</li>
-            </ul>
-            <Button style={button} href={dashboardLink}>
-              Go to Dashboard
-            </Button>
-            <Hr style={hr} />
-            <Text style={footer}>
-              If you have any questions or need assistance, don't hesitate to
-              reach out to our support team.
-            </Text>
-          </Section>
+          <Heading style={h1}>Welcome to Repload!</Heading>
+          <Text style={text}>
+            {name ? `Hi ${name},` : 'Hi there,'}
+          </Text>
+          <Text style={text}>
+            Thank you for joining Repload! We're excited to help you manage and
+            optimize your sales calls with AI-powered insights.
+          </Text>
+          <Text style={text}>
+            Here's what you can do with Repload:
+          </Text>
+          <ul style={list}>
+            <li style={listItem}>Connect your call platform</li>
+            <li style={listItem}>Get AI-powered call insights</li>
+            <li style={listItem}>Track performance metrics</li>
+            <li style={listItem}>Improve your sales process</li>
+          </ul>
+          <Text style={text}>
+            If you have any questions, feel free to reply to this email.
+          </Text>
+          <Text style={text}>
+            Best regards,
+            <br />
+            The Repload Team
+          </Text>
+          <Button style={button} href={dashboardLink}>
+            Go to Dashboard
+          </Button>
+          <Hr style={hr} />
+          <Text style={footer}>
+            If you have any questions or need assistance, don't hesitate to
+            reach out to our support team.
+          </Text>
         </Container>
       </Body>
     </Html>
   );
-}
+};
 
 const main = {
-  backgroundColor: '#f6f9fc',
-  padding: '40px 0',
+  backgroundColor: '#ffffff',
+  fontFamily:
+    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif',
 };
 
 const container = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #f0f0f0',
-  borderRadius: '5px',
   margin: '0 auto',
-  padding: '20px',
-  width: '100%',
-  maxWidth: '600px',
+  padding: '20px 0 48px',
+  maxWidth: '560px',
 };
 
-const heading = {
+const h1 = {
+  color: '#1a1a1a',
   fontSize: '24px',
-  fontWeight: 'bold',
-  textAlign: 'center' as const,
-  margin: '30px 0',
+  fontWeight: '600',
+  lineHeight: '1.3',
+  padding: '16px 0',
 };
 
-const paragraph = {
+const text = {
+  color: '#444',
   fontSize: '16px',
-  lineHeight: '26px',
-  color: '#484848',
-  margin: '20px 0',
+  lineHeight: '1.5',
+  margin: '16px 0',
 };
 
 const list = {
-  margin: '20px 0',
+  color: '#444',
+  fontSize: '16px',
+  lineHeight: '1.5',
+  margin: '16px 0',
   paddingLeft: '20px',
 };
 
 const listItem = {
-  fontSize: '16px',
-  lineHeight: '26px',
-  color: '#484848',
-  margin: '10px 0',
+  margin: '8px 0',
 };
 
 const button = {
@@ -120,4 +129,6 @@ const footer = {
   color: '#9ca3af',
   textAlign: 'center' as const,
   margin: '30px 0',
-}; 
+};
+
+export default WelcomeEmail; 

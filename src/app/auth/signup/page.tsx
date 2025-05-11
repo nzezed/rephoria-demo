@@ -72,7 +72,7 @@ export default function SignUpPage() {
           <div className="space-y-6">
             <div className="space-y-2 text-center">
               <Title className="text-white">Create your account</Title>
-              <Text className="text-gray-300">Get started with Rephoria</Text>
+              <Text className="text-gray-300">Join Repload and start optimizing your sales performance today.</Text>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

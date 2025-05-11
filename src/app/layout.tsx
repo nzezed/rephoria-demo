@@ -6,8 +6,8 @@ import SessionProvider from '@/components/providers/SessionProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Rephoria AI',
-  description: 'AI-powered call center analytics and insights',
+  title: 'Repload',
+  description: 'Your AI-powered sales performance optimizer',
 }
 
 export default function RootLayout({
