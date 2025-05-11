@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
+import { CheckCircle2 } from 'lucide-react';
 
 const resetPasswordSchema = z.object({
   password: z.string()
@@ -24,10 +26,12 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export interface ResetPasswordFormProps {
   token: string;
+  email: string;
 }
 
-export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
+export function ResetPasswordForm({ token, email }: ResetPasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
 
   const form = useForm<ResetPasswordFormData>({
@@ -47,29 +51,49 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
+          email,
           newPassword: data.password,
+          confirmPassword: data.confirmPassword,
         }),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to reset password');
+        throw new Error(responseData.error || 'Failed to reset password');
       }
 
+      setIsSuccess(true);
       toast({
         title: 'Success',
-        description: 'Your password has been reset. You can now log in with your new password.',
+        description: 'Your password has been reset successfully.',
       });
-
-      router.push('/auth/login');
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to reset password. The link may have expired.',
+        description: error instanceof Error ? error.message : 'Failed to reset password. The link may have expired.',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
+          <CheckCircle2 className="h-12 w-12 text-green-500" />
+        </div>
+        <h2 className="text-xl font-semibold">Password Reset Successful</h2>
+        <p className="text-gray-500">Your password has been reset successfully. You can now log in with your new password.</p>
+        <Link href="/auth/signin">
+          <Button className="w-full">
+            Go to Sign In
+          </Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
